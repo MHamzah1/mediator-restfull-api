@@ -1,9 +1,15 @@
+// src/user/users.module.ts
+
 import { Module } from '@nestjs/common';
-import { UserController } from './user.controller';
-import { UserService } from './user.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { User } from 'src/entities/user.entity';
+import { UsersService } from './user.service';
+import { UsersController } from './user.controller';
 
 @Module({
-  controllers: [UserController],
-  providers: [UserService]
+  imports: [TypeOrmModule.forFeature([User])],
+  providers: [UsersService],
+  controllers: [UsersController],
+  exports: [UsersService], // penting untuk digunakan di auth module nanti
 })
-export class UserModule {}
+export class UsersModule {}

@@ -1,9 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-// import { PropertyFeature } from './propertyFeature.entity';
-// import { User } from './user.entity';
 
 @Entity()
-export class Product {
+export class Brand {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -16,7 +14,7 @@ export class Product {
   @Column({ default: 0 })
   basePrice: number;
 
-  @Column({ default: 0 })
+  @Column({ default: '' })
   imageUrl: string;
 
   @Column({ default: true })
