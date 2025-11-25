@@ -9,7 +9,7 @@ import {
   IsPhoneNumber,
 } from 'class-validator';
 
-export class RegisterDto {
+export class CreateUserDto {
   @IsEmail({}, { message: 'Format email tidak valid' })
   email: string;
 
@@ -19,6 +19,7 @@ export class RegisterDto {
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/, {
     message: 'Password harus mengandung huruf kecil, huruf besar dan angka',
   })
+  @IsString()
   password: string;
 
   @IsNotEmpty({ message: 'Nama lengkap wajib diisi' })
