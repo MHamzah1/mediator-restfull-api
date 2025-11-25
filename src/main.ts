@@ -1,3 +1,4 @@
+import 'tsconfig-paths/register'; // Tambahkan di baris pertama
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
