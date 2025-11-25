@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
-import { CreateUserDto } from '../dtos/createUserDto';
+import { CreateUserDto } from './dto/createUserDto';
 
 @Injectable()
 export class UsersService {
@@ -13,7 +13,17 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const user = await this.usersRepository.create(createUserDto);
+    const existing = await this.usersRepository.findOne({
+      where: { email: createUserDto.email },
+    });
+
+    if (existing) {
+      throw new ConflictException('Email sudah terdaftar');
+    }
+
+    const user = this.usersRepository.create({
+      ...createUserDto,
+    });
 
     return this.usersRepository.save(user);
   }
