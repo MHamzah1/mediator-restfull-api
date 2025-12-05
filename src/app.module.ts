@@ -7,6 +7,7 @@ import dbConfig from './config/db.config';
 import { UsersModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandModule } from './Brand/brand.module';
+import { CarModelModule } from './CarModel/car-model.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { BrandModule } from './Brand/brand.module';
     UsersModule,
     AuthModule,
     BrandModule,
+    CarModelModule,
   ],
   controllers: [AppController],
   providers: [AppService],
