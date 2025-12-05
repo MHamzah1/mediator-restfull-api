@@ -26,7 +26,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 import { QueryGetAllDto } from '../common/query-get-all.dto';
 
 @ApiTags('Car Models')
-@Controller('api/car-models')
+@Controller('api/CarModels')
 export class CarModelController {
   constructor(private readonly carModelService: CarModelService) {}
 
