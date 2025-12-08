@@ -18,7 +18,7 @@ export class CustomPriceService {
 
   async create(
     createCustomPriceDto: CreateCustomPriceDto,
-  ): Promise<CustomPrice> {
+  ): Promise<{ message: string; data: CustomPrice }> {
     // Cek apakah car model exists
     const carModel = await this.carModelRepository.findOne({
       where: { id: createCustomPriceDto.modelId },
@@ -29,7 +29,12 @@ export class CustomPriceService {
     }
 
     const customPrice = this.customPriceRepository.create(createCustomPriceDto);
-    return this.customPriceRepository.save(customPrice);
+    const savedCustomPrice = await this.customPriceRepository.save(customPrice);
+
+    return {
+      message: 'Custom price berhasil dibuat',
+      data: savedCustomPrice,
+    };
   }
 
   async findAll(queryDto: QueryCustomPriceDto) {
@@ -196,7 +201,9 @@ export class CustomPriceService {
     return this.customPriceRepository.save(customPrice);
   }
 
-  async remove(id: string): Promise<void> {
+  // ...existing code...
+
+  async remove(id: string): Promise<{ message: string }> {
     const customPrice = await this.customPriceRepository.findOne({
       where: { id },
     });
@@ -206,5 +213,9 @@ export class CustomPriceService {
     }
 
     await this.customPriceRepository.delete(id);
+
+    return {
+      message: 'Custom price berhasil dihapus',
+    };
   }
 }

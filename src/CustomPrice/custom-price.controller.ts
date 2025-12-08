@@ -8,8 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -217,7 +215,6 @@ export class CustomPriceController {
   @Delete('custom-prices/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete custom price by ID (Admin Only)' })
   @ApiParam({
     name: 'id',
@@ -225,12 +222,17 @@ export class CustomPriceController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
-    status: 204,
-    description: 'Custom price berhasil dihapus (No Content)',
+    status: 200, // ✅ UBAH dari 204 ke 200
+    description: 'Custom price berhasil dihapus',
+    schema: {
+      example: {
+        message: 'Custom price berhasil dihapus',
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Custom price tidak ditemukan' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Token tidak valid' })
   async remove(@Param('id') id: string) {
-    await this.customPriceService.remove(id);
+    return await this.customPriceService.remove(id); // ✅ RETURN hasilnya
   }
 }

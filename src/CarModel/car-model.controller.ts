@@ -8,8 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -177,7 +175,6 @@ export class CarModelController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete car model by ID (Admin Only)' })
   @ApiParam({
     name: 'id',
@@ -185,8 +182,13 @@ export class CarModelController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
-    status: 204,
-    description: 'Car model berhasil dihapus (No Content)',
+    status: 200, // ✅ UBAH dari 204 ke 200
+    description: 'Car model berhasil dihapus',
+    schema: {
+      example: {
+        message: 'Car model berhasil dihapus',
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Model mobil tidak ditemukan' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Token tidak valid' })

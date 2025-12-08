@@ -8,8 +8,6 @@ import {
   Param,
   Query,
   UseGuards,
-  HttpCode,
-  HttpStatus,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -179,7 +177,6 @@ export class SpecificationController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete specification by ID (Admin Only)' })
   @ApiParam({
     name: 'id',
@@ -187,8 +184,13 @@ export class SpecificationController {
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @ApiResponse({
-    status: 204,
-    description: 'Specification berhasil dihapus (No Content)',
+    status: 200,
+    description: 'Specification berhasil dihapus',
+    schema: {
+      example: {
+        message: 'Specification berhasil dihapus',
+      },
+    },
   })
   @ApiResponse({ status: 404, description: 'Spesifikasi tidak ditemukan' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Token tidak valid' })

@@ -18,7 +18,7 @@ export class SpecificationService {
 
   async create(
     createSpecificationDto: CreateSpecificationDto,
-  ): Promise<Specification> {
+  ): Promise<{ message: string; data: Specification }> {
     // Cek apakah car model exists
     const carModel = await this.carModelRepository.findOne({
       where: { id: createSpecificationDto.modelId },
@@ -31,7 +31,13 @@ export class SpecificationService {
     const specification = this.specificationRepository.create(
       createSpecificationDto,
     );
-    return this.specificationRepository.save(specification);
+    const savedSpecification =
+      await this.specificationRepository.save(specification);
+
+    return {
+      message: 'Spesifikasi berhasil dibuat',
+      data: savedSpecification,
+    };
   }
 
   async findAll(queryDto: QuerySpecificationDto) {
@@ -145,7 +151,7 @@ export class SpecificationService {
     return this.specificationRepository.save(specification);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const specification = await this.specificationRepository.findOne({
       where: { id },
     });
@@ -155,5 +161,6 @@ export class SpecificationService {
     }
 
     await this.specificationRepository.delete(id);
+    return { message: 'Spesifikasi berhasil dihapus' };
   }
 }

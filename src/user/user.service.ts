@@ -274,7 +274,7 @@ export class UsersService {
     return result as User;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const user = await this.usersRepository.findOne({ where: { id } });
 
     if (!user) {
@@ -282,5 +282,6 @@ export class UsersService {
     }
 
     await this.usersRepository.delete(id);
+    return { message: 'User berhasil dihapus' };
   }
 }
