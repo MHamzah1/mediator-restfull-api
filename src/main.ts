@@ -8,7 +8,12 @@ async function bootstrap() {
 
   // ✅ Konfigurasi CORS
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000'], // Frontend URLs
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3000/api/docs', // Tambahkan origin Swagger
+      'http://127.0.0.1:3000',
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [

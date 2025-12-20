@@ -8,6 +8,8 @@ import { UsersModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandModule } from './Brand/brand.module';
 import { CarModelModule } from './CarModel/car-model.module';
+import { SpecificationModule } from './Specification/specification.module';
+import { CustomPriceModule } from './CustomPrice/custom-price.module';
 import { MarketplaceModule } from './marketplace-module/marketplace.module';
 
 @Module({
@@ -26,6 +28,8 @@ import { MarketplaceModule } from './marketplace-module/marketplace.module';
     AuthModule,
     BrandModule,
     CarModelModule,
+    SpecificationModule,
+    CustomPriceModule,
     MarketplaceModule,
   ],
   controllers: [AppController],

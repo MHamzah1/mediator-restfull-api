@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CarModel } from '../entities/car-model.entity';
@@ -20,7 +16,9 @@ export class CarModelService {
     private brandRepository: Repository<Brand>,
   ) {}
 
-  async create(createCarModelDto: CreateCarModelDto): Promise<CarModel> {
+  async create(
+    createCarModelDto: CreateCarModelDto,
+  ): Promise<{ message: string; data: CarModel }> {
     // Cek apakah brand exists
     const brand = await this.brandRepository.findOne({
       where: { id: createCarModelDto.brandId },
@@ -31,7 +29,12 @@ export class CarModelService {
     }
 
     const carModel = this.carModelRepository.create(createCarModelDto);
-    return this.carModelRepository.save(carModel);
+    const savedCarModel = await this.carModelRepository.save(carModel);
+
+    return {
+      message: 'Model mobil berhasil dibuat',
+      data: savedCarModel,
+    };
   }
 
   // Helper untuk menghitung date range berdasarkan periode
@@ -238,7 +241,7 @@ export class CarModelService {
     return this.carModelRepository.save(carModel);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const carModel = await this.carModelRepository.findOne({
       where: { id },
     });
@@ -248,5 +251,9 @@ export class CarModelService {
     }
 
     await this.carModelRepository.delete(id);
+
+    return {
+      message: 'Model mobil berhasil dihapus',
+    };
   }
 }

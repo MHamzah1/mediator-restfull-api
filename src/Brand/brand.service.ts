@@ -17,7 +17,10 @@ export class BrandService {
     private brandRepository: Repository<Brand>,
   ) {}
 
-  async create(createBrandDto: CreateBrandDto): Promise<Brand> {
+  async create(createBrandDto: CreateBrandDto): Promise<{
+    message: string;
+    data: Brand;
+  }> {
     // Cek apakah nama brand sudah ada
     const existing = await this.brandRepository.findOne({
       where: { name: createBrandDto.name },
@@ -28,7 +31,12 @@ export class BrandService {
     }
 
     const brand = this.brandRepository.create(createBrandDto);
-    return this.brandRepository.save(brand);
+    const savedBrand = await this.brandRepository.save(brand);
+
+    return {
+      message: 'Brand berhasil dibuat',
+      data: savedBrand,
+    };
   }
 
   // Helper untuk menghitung date range berdasarkan periode
@@ -226,7 +234,7 @@ export class BrandService {
     return this.brandRepository.save(brand);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string): Promise<{ message: string }> {
     const brand = await this.brandRepository.findOne({ where: { id } });
 
     if (!brand) {
@@ -234,5 +242,6 @@ export class BrandService {
     }
 
     await this.brandRepository.delete(id);
+    return { message: 'Brand berhasil dihapus' };
   }
 }
