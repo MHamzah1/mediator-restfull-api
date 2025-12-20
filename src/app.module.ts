@@ -8,6 +8,7 @@ import { UsersModule } from './user/user.module';
 import { AuthModule } from './auth/auth.module';
 import { BrandModule } from './Brand/brand.module';
 import { CarModelModule } from './CarModel/car-model.module';
+import { MarketplaceModule } from './marketplace-module/marketplace.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CarModelModule } from './CarModel/car-model.module';
     AuthModule,
     BrandModule,
     CarModelModule,
+    MarketplaceModule,
   ],
   controllers: [AppController],
   providers: [AppService],

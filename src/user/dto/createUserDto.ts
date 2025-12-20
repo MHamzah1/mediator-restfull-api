@@ -1,3 +1,5 @@
+// src/user/dto/createUserDto.ts
+
 import {
   IsEmail,
   IsNotEmpty,
@@ -7,8 +9,9 @@ import {
   IsEnum,
   IsString,
   IsPhoneNumber,
+  IsOptional,
 } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -51,6 +54,25 @@ export class CreateUserDto {
     message: 'Nomor telepon tidak valid (gunakan format Indonesia)',
   })
   phoneNumber: string;
+
+  @ApiPropertyOptional({
+    example: '6281234567890',
+    description: 'Nomor WhatsApp untuk marketplace (format: 628xxx) - Opsional',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^628\d{8,13}$/, {
+    message: 'Format nomor WhatsApp tidak valid (harus 628xxxxxxxxx)',
+  })
+  whatsappNumber?: string;
+
+  @ApiPropertyOptional({
+    example: 'Jakarta Selatan',
+    description: 'Lokasi user untuk marketplace - Opsional',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
 
   @ApiProperty({
     example: 'customer',

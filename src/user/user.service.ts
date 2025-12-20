@@ -1,16 +1,12 @@
+// src/user/user.service.ts
+
 import {
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import {
-  Repository,
-  // Between,
-  // Like,
-  // LessThanOrEqual,
-  // MoreThanOrEqual,
-} from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from '../entities/user.entity';
 import { CreateUserDto } from './dto/createUserDto';
@@ -134,12 +130,14 @@ export class UsersService {
 
     const queryBuilder = this.usersRepository.createQueryBuilder('user');
 
-    // Select fields tanpa password
+    // Select fields tanpa password (TAMBAHKAN whatsappNumber dan location)
     queryBuilder.select([
       'user.id',
       'user.email',
       'user.fullName',
       'user.phoneNumber',
+      'user.whatsappNumber',
+      'user.location',
       'user.role',
       'user.createdAt',
       'user.updatedAt',
@@ -222,6 +220,8 @@ export class UsersService {
         'email',
         'fullName',
         'phoneNumber',
+        'whatsappNumber',
+        'location',
         'role',
         'createdAt',
         'updatedAt',

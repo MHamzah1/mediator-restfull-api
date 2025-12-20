@@ -1,3 +1,5 @@
+// src/user/dto/updateUserDto.ts
+
 import {
   IsEmail,
   IsOptional,
@@ -52,6 +54,25 @@ export class UpdateUserDto {
     message: 'Nomor telepon tidak valid (gunakan format Indonesia)',
   })
   phoneNumber?: string;
+
+  @ApiPropertyOptional({
+    example: '6281234567890',
+    description: 'Nomor WhatsApp untuk marketplace (format: 628xxx)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^628\d{8,13}$/, {
+    message: 'Format nomor WhatsApp tidak valid (harus 628xxxxxxxxx)',
+  })
+  whatsappNumber?: string;
+
+  @ApiPropertyOptional({
+    example: 'Jakarta Selatan',
+    description: 'Lokasi user untuk marketplace',
+  })
+  @IsOptional()
+  @IsString()
+  location?: string;
 
   @ApiPropertyOptional({
     example: 'customer',

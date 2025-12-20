@@ -1,3 +1,5 @@
+// src/user/user.controller.ts
+
 import {
   Controller,
   Get,
@@ -17,7 +19,6 @@ import {
   ApiBody,
   ApiBearerAuth,
   ApiParam,
-  // ApiQuery,
 } from '@nestjs/swagger';
 import { UsersService } from './user.service';
 import { CreateUserDto } from './dto/createUserDto';
@@ -64,6 +65,8 @@ export class UsersController {
             email: 'john.doe@example.com',
             fullName: 'John Doe',
             phoneNumber: '+628123456789',
+            whatsappNumber: '6281234567890',
+            location: 'Jakarta Selatan',
             role: 'customer',
             createdAt: '2025-11-30T00:00:00.000Z',
             updatedAt: '2025-11-30T00:00:00.000Z',
@@ -96,6 +99,8 @@ export class UsersController {
             email: 'john.doe@example.com',
             fullName: 'John Doe',
             phoneNumber: '+628123456789',
+            whatsappNumber: '6281234567890',
+            location: 'Jakarta Selatan',
             role: 'customer',
             createdAt: '2025-11-30T00:00:00.000Z',
             updatedAt: '2025-11-30T00:00:00.000Z',
@@ -126,6 +131,8 @@ export class UsersController {
         email: 'john.doe@example.com',
         fullName: 'John Doe',
         phoneNumber: '+628123456789',
+        whatsappNumber: '6281234567890',
+        location: 'Jakarta Selatan',
         role: 'customer',
         createdAt: '2025-11-30T00:00:00.000Z',
         updatedAt: '2025-11-30T00:00:00.000Z',
@@ -157,6 +164,8 @@ export class UsersController {
         email: 'john.doe@example.com',
         fullName: 'John Doe',
         phoneNumber: '+628123456789',
+        whatsappNumber: '6281234567890',
+        location: 'Jakarta Selatan',
         role: 'customer',
         createdAt: '2025-11-30T00:00:00.000Z',
         updatedAt: '2025-11-30T00:00:00.000Z',
@@ -188,6 +197,8 @@ export class UsersController {
         email: 'john.doe@example.com',
         fullName: 'John Doe Updated',
         phoneNumber: '+628123456789',
+        whatsappNumber: '6281234567890',
+        location: 'Jakarta Selatan',
         role: 'customer',
         createdAt: '2025-11-30T00:00:00.000Z',
         updatedAt: '2025-11-30T00:00:00.000Z',
