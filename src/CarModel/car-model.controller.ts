@@ -21,7 +21,7 @@ import { CarModelService } from './car-model.service';
 import { CreateCarModelDto } from './dto/create-car-model.dto';
 import { UpdateCarModelDto } from './dto/update-car-model.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
-import { QueryGetAllDto } from '../common/query-get-all.dto';
+import { QueryGetAllModelDto } from './dto/query-get-all-model.dto';
 
 @ApiTags('Car Models')
 @Controller('api/CarModels')
@@ -65,7 +65,7 @@ export class CarModelController {
     },
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Token tidak valid' })
-  async findAll(@Query() query: QueryGetAllDto) {
+  async findAll(@Query() query: QueryGetAllModelDto) {
     return this.carModelService.findAll(query);
   }
 

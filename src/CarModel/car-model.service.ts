@@ -5,7 +5,7 @@ import { CarModel } from '../entities/car-model.entity';
 import { Brand } from '../entities/brand.entity';
 import { CreateCarModelDto } from './dto/create-car-model.dto';
 import { UpdateCarModelDto } from './dto/update-car-model.dto';
-import { QueryGetAllDto } from '../common/query-get-all.dto';
+import { QueryGetAllModelDto } from './dto/query-get-all-model.dto';
 
 @Injectable()
 export class CarModelService {
@@ -116,7 +116,7 @@ export class CarModelService {
     return { startDate, endDate };
   }
 
-  async findAll(queryDto: QueryGetAllDto) {
+  async findAll(queryDto: QueryGetAllModelDto) {
     const {
       page = 1,
       perPage = 10,
@@ -127,6 +127,7 @@ export class CarModelService {
       startDate,
       endDate,
       periode,
+      brandId,
     } = queryDto;
 
     const queryBuilder = this.carModelRepository.createQueryBuilder('carModel');
@@ -149,6 +150,10 @@ export class CarModelService {
       queryBuilder.andWhere('carModel.isActive = :isActive', { isActive });
     }
 
+    // Filter berdasarkan brandId
+    if (brandId) {
+      queryBuilder.andWhere('carModel.brandId = :brandId', { brandId });
+    }
     // Filter berdasarkan periode
     if (periode) {
       const { startDate: periodStart, endDate: periodEnd } =
