@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Build output
+dist
+
+# Environment files (jangan include secrets ke image)
+.env
+.env.local
+.env.*.local
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Test and coverage
+coverage
+.nyc_output
+
+# Documentation
+*.md
+!README.md
+
+# Docker files (tidak perlu di dalam image)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Misc
+*.log
+.eslintcache
