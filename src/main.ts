@@ -11,7 +11,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
-      'http://localhost:3000/api/docs', // Tambahkan origin Swagger
+      'http://localhost:3000/api/docs',
       'http://127.0.0.1:3000',
     ],
     credentials: true,
@@ -31,14 +31,17 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
     }),
   );
 
   // ✅ Setup Swagger
   const config = new DocumentBuilder()
     .setTitle('Mediator RESTful API')
-    .setDescription('API Documentation untuk Mediator Application')
-    .setVersion('1.0')
+    .setDescription('API Kalkulator Harga Mobil Bekas - Versi 2.1')
+    .setVersion('2.1')
     .addBearerAuth(
       {
         type: 'http',
@@ -50,10 +53,26 @@ async function bootstrap() {
       },
       'JWT-auth',
     )
+    .addTag('Authentication', 'Login & Register')
+    .addTag('Users', 'User management')
+    .addTag('Brands', 'Brand management')
+    .addTag('Car Models', 'Car Model management')
+    .addTag('Variants', 'Variant/Tipe management (NEW)')
+    .addTag('Year Prices', 'Year Price management (NEW)')
+    .addTag('Price Adjustments', 'Price Adjustment per Model (NEW)')
+    .addTag('Price Calculator', 'Price calculation (NEW)')
+    .addTag('Calculation History', 'Calculation history (NEW)')
+    .addTag('Specifications', 'Specification management')
+    .addTag('Custom Prices', 'Custom Price management')
+    .addTag('Marketplace', 'Marketplace listings')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(

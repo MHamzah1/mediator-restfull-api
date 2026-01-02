@@ -76,7 +76,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Filter berdasarkan Brand ID',
-    // example: '123e4567-e89b-12d3-a456-426614174000',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsOptional()
   @IsUUID('4')
@@ -84,7 +84,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Filter berdasarkan Car Model ID',
-    // example: '123e4567-e89b-12d3-a456-426614174000',
+    example: '123e4567-e89b-12d3-a456-426614174000',
   })
   @IsOptional()
   @IsUUID('4')
@@ -92,7 +92,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Harga minimal',
-    // example: 100000000,
+    example: 100000000,
   })
   @IsOptional()
   @Type(() => Number)
@@ -101,7 +101,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Harga maksimal',
-    // example: 200000000,
+    example: 200000000,
   })
   @IsOptional()
   @Type(() => Number)
@@ -110,7 +110,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Tahun minimal',
-    // example: 2018,
+    example: 2018,
   })
   @IsOptional()
   @Type(() => Number)
@@ -119,7 +119,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Tahun maksimal',
-    // example: 2023,
+    example: 2023,
   })
   @IsOptional()
   @Type(() => Number)
@@ -128,7 +128,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Jenis transmisi',
-    // example: 'automatic',
+    example: 'automatic',
   })
   @IsOptional()
   @IsString()
@@ -136,7 +136,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Jenis bahan bakar',
-    // example: 'bensin',
+    example: 'bensin',
   })
   @IsOptional()
   @IsString()
@@ -144,7 +144,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Kota lokasi',
-    // example: 'Jakarta',
+    example: 'Jakarta',
   })
   @IsOptional()
   @IsString()
@@ -152,7 +152,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Provinsi lokasi',
-    // example: 'DKI Jakarta',
+    example: 'DKI Jakarta',
   })
   @IsOptional()
   @IsString()
@@ -160,7 +160,7 @@ export class FilterListingDto {
 
   @ApiPropertyOptional({
     description: 'Kondisi mobil',
-    // example: 'bekas',
+    example: 'bekas',
   })
   @IsOptional()
   @IsString()

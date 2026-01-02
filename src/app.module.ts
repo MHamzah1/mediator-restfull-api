@@ -12,6 +12,13 @@ import { SpecificationModule } from './Specification/specification.module';
 import { CustomPriceModule } from './CustomPrice/custom-price.module';
 import { MarketplaceModule } from './marketplace-module/marketplace.module';
 
+// New modules for API V2.1
+import { VariantModule } from './Variant/variant.module';
+import { YearPriceModule } from './YearPrice/year-price.module';
+import { PriceAdjustmentModule } from './PriceAdjustment/price-adjustment.module';
+import { PriceCalculatorModule } from './PriceCalculator/price-calculator.module';
+import { CalculationHistoryModule } from './CalculationHistory/calculation-history.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,6 +38,12 @@ import { MarketplaceModule } from './marketplace-module/marketplace.module';
     SpecificationModule,
     CustomPriceModule,
     MarketplaceModule,
+    // API V2.1 Modules
+    VariantModule,
+    YearPriceModule,
+    PriceAdjustmentModule,
+    PriceCalculatorModule,
+    CalculationHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
