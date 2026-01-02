@@ -526,7 +526,8 @@ export class MarketplaceService {
     }
 
     // Generate pre-filled message
-    const preFilledMessage = `Halo, saya tertarik dengan mobil ${listing.carModel.brand.name} ${listing.carModel.modelName} ${listing.year} seharga Rp ${listing.price.toLocaleString('id-ID')}. Apakah masih tersedia?`;
+    const formattedPrice = new Intl.NumberFormat('id-ID').format(Number(listing.price));
+    const preFilledMessage = `Halo, saya tertarik dengan mobil ${listing.carModel.brand.name} ${listing.carModel.modelName} ${listing.year} seharga Rp ${formattedPrice}. Apakah masih tersedia?`;
 
     const encodedMessage = encodeURIComponent(preFilledMessage);
     const whatsappUrl = `https://wa.me/${listing.sellerWhatsapp}?text=${encodedMessage}`;

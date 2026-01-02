@@ -27,11 +27,11 @@ import { FilterListingDto } from './dto/filter-listing.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 
 @ApiTags('Marketplace Listings')
-@Controller('api/marketplace/listings')
+@Controller('api/marketplace')
 export class MarketplaceController {
   constructor(private readonly marketplaceService: MarketplaceService) {}
 
-  @Post()
+  @Post('listings')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create listing mobil baru (Seller)' })
@@ -76,7 +76,7 @@ export class MarketplaceController {
     return this.marketplaceService.create(req.user.userId, createListingDto);
   }
 
-  @Get()
+  @Get('listings')
   @ApiOperation({
     summary: 'Get all listings dengan pagination dan filter (Public)',
   })
@@ -179,7 +179,7 @@ export class MarketplaceController {
     return this.marketplaceService.getMyListings(req.user.userId, filterDto);
   }
 
-  @Get(':id')
+  @Get('listings/:id')
   @ApiOperation({ summary: 'Get listing detail by ID (Public)' })
   @ApiParam({
     name: 'id',
@@ -244,7 +244,7 @@ export class MarketplaceController {
     return this.marketplaceService.findOne(id);
   }
 
-  @Get(':id/whatsapp')
+  @Get('listings/:id/whatsapp')
   @ApiOperation({
     summary: 'Generate WhatsApp link untuk contact seller (Public)',
   })
@@ -285,7 +285,7 @@ export class MarketplaceController {
     return this.marketplaceService.generateWhatsappLink(id);
   }
 
-  @Put(':id')
+  @Put('listings/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update listing by ID (Owner Only)' })
@@ -329,7 +329,7 @@ export class MarketplaceController {
     );
   }
 
-  @Delete(':id')
+  @Delete('listings/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @HttpCode(HttpStatus.OK)
