@@ -3,12 +3,14 @@ import { UsersService } from '../user/user.service';
 import { compare } from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { AuthJwtPayload } from './types/auth-jwtPayload';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -20,16 +22,25 @@ export class AuthService {
     if (!isPasswordMatch)
       throw new UnauthorizedException('Invalid Credentials');
 
-    return { id: user.id, email: user.email };
+    return user;
   }
 
-  async login(userId: string) {
-    const payload: AuthJwtPayload = { sub: userId };
-    const token = this.jwtService.sign(payload);
+  async login(user: any) {
+    const payload: AuthJwtPayload = { sub: user.id };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
     return {
-      message: 'Login berhasil',
-      access_token: token,
+      accessToken,
+      refreshToken,
+      expiresIn: 3600,
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        whatsappNumber: user.whatsappNumber,
+      },
     };
   }
 }
