@@ -1,15 +1,13 @@
 import {
   IsString,
   IsNumber,
-  IsArray,
   IsOptional,
   IsBoolean,
   Min,
   MinLength,
-  ArrayMinSize,
-  ArrayMaxSize,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude } from 'class-transformer';
 
 export class UpdateListingDto {
   @ApiPropertyOptional({
@@ -47,19 +45,16 @@ export class UpdateListingDto {
   @IsString({ message: 'Status pajak harus berupa string' })
   taxStatus?: string;
 
+  // Field ini untuk menerima files dari multipart/form-data
+  // Actual file handling dilakukan oleh @UploadedFiles() decorator
   @ApiPropertyOptional({
-    example: [
-      'https://cdn.example.com/car1-front-new.jpg',
-      'https://cdn.example.com/car1-back.jpg',
-    ],
-    description: 'Array URL gambar mobil',
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Upload gambar baru (opsional, max 10 files)',
   })
   @IsOptional()
-  @IsArray({ message: 'Gambar harus berupa array' })
-  @ArrayMinSize(1, { message: 'Minimal 1 gambar diperlukan' })
-  @ArrayMaxSize(10, { message: 'Maksimal 10 gambar' })
-  @IsString({ each: true, message: 'Setiap gambar harus berupa URL string' })
-  images?: string[];
+  @Exclude() // Exclude dari transformation karena ditangani oleh multer
+  images?: any;
 
   @ApiPropertyOptional({
     example: true,

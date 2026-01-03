@@ -8,9 +8,10 @@ import {
   Max,
   MinLength,
   Matches,
+  IsArray,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Exclude } from 'class-transformer';
 
 export class CreateListingDto {
   @ApiProperty({
@@ -136,4 +137,15 @@ export class CreateListingDto {
     message: 'Format nomor WhatsApp tidak valid (harus 628xxxxxxxxx)',
   })
   sellerWhatsapp: string;
+
+  // Field ini untuk menerima files dari multipart/form-data
+  // Actual file handling dilakukan oleh @UploadedFiles() decorator
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Upload 1-10 gambar mobil (max 5MB per file)',
+  })
+  @IsOptional()
+  @Exclude() // Exclude dari transformation karena ditangani oleh multer
+  images?: any;
 }
