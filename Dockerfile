@@ -52,6 +52,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package*.json ./
 
+# ✅ Create uploads directory with proper permissions
+RUN mkdir -p /app/uploads/listings && \
+    chown -R nestjs:nodejs /app/uploads
+
 # Change ownership to non-root user
 RUN chown -R nestjs:nodejs /app
 
@@ -60,6 +64,9 @@ USER nestjs
 
 # Expose port
 EXPOSE 3000
+
+# ✅ Define volume for persistent uploads
+VOLUME ["/app/uploads"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \

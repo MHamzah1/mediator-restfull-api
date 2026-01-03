@@ -11,6 +11,9 @@ import {
   HttpCode,
   HttpStatus,
   Request,
+  BadRequestException,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,12 +22,15 @@ import {
   ApiBody,
   ApiBearerAuth,
   ApiParam,
+  ApiConsumes,
 } from '@nestjs/swagger';
 import { MarketplaceService } from './marketplace.service';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { FilterListingDto } from './dto/filter-listing.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { multerConfig } from 'src/config/multer.config';
 
 @ApiTags('Marketplace Listings')
 @Controller('api/marketplace')
@@ -34,48 +40,86 @@ export class MarketplaceController {
   @Post('listings')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Create listing mobil baru (Seller)' })
-  @ApiBody({ type: CreateListingDto })
-  @ApiResponse({
-    status: 201,
-    description: 'Listing berhasil dibuat',
+  @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Create listing mobil baru dengan upload foto (Seller)',
+  })
+  @ApiBody({
     schema: {
-      example: {
-        message: 'Listing berhasil dibuat',
-        data: {
-          id: '650e8400-e29b-41d4-a716-446655440000',
-          sellerId: '550e8400-e29b-41d4-a716-446655440000',
-          carModelId: '550e8400-e29b-41d4-a716-446655440001',
-          year: 2020,
-          price: 150000000,
-          mileage: 50000,
-          transmission: 'automatic',
-          fuelType: 'bensin',
-          color: 'Hitam Metalik',
-          locationCity: 'Jakarta Selatan',
-          locationProvince: 'DKI Jakarta',
-          description: 'Mobil terawat...',
-          condition: 'bekas',
-          ownershipStatus: 'Tangan Pertama',
-          taxStatus: 'Pajak Hidup',
-          images: ['https://cdn.example.com/car1.jpg'],
-          sellerWhatsapp: '6281234567890',
-          isActive: true,
-          viewCount: 0,
-          contactClickCount: 0,
-          createdAt: '2025-12-21T10:30:00Z',
-          updatedAt: '2025-12-21T10:30:00Z',
+      type: 'object',
+      required: [
+        'carModelId',
+        'year',
+        'price',
+        'mileage',
+        'transmission',
+        'fuelType',
+        'color',
+        'locationCity',
+        'locationProvince',
+        'description',
+        'sellerWhatsapp',
+        'images',
+      ],
+      properties: {
+        carModelId: {
+          type: 'string',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+        },
+        year: { type: 'number', example: 2020 },
+        price: { type: 'number', example: 150000000 },
+        mileage: { type: 'number', example: 50000 },
+        transmission: { type: 'string', example: 'automatic' },
+        fuelType: { type: 'string', example: 'bensin' },
+        color: { type: 'string', example: 'Hitam Metalik' },
+        locationCity: { type: 'string', example: 'Jakarta Selatan' },
+        locationProvince: { type: 'string', example: 'DKI Jakarta' },
+        description: {
+          type: 'string',
+          example:
+            'Mobil terawat, service rutin di dealer resmi. Kondisi istimewa.',
+        },
+        condition: { type: 'string', example: 'bekas' },
+        ownershipStatus: { type: 'string', example: 'Tangan Pertama' },
+        taxStatus: { type: 'string', example: 'Pajak Hidup' },
+        sellerWhatsapp: { type: 'string', example: '6281234567890' },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Upload 1-10 gambar mobil (max 5MB per file)',
         },
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Model mobil tidak ditemukan' })
-  @ApiResponse({ status: 400, description: 'Validasi gagal' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - Token tidak valid' })
-  async create(@Request() req, @Body() createListingDto: CreateListingDto) {
-    return this.marketplaceService.create(req.user.userId, createListingDto);
-  }
+  @ApiResponse({
+    status: 201,
+    description: 'Listing berhasil dibuat',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validasi gagal atau file tidak valid',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async create(
+    @Request() req,
+    @Body() createListingDto: CreateListingDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Minimal 1 gambar diperlukan');
+    }
 
+    if (files.length > 10) {
+      throw new BadRequestException('Maksimal 10 gambar');
+    }
+
+    return this.marketplaceService.create(
+      req.user.userId,
+      createListingDto,
+      files,
+    );
+  }
   @Get('listings')
   @ApiOperation({
     summary: 'Get all listings dengan pagination dan filter (Public)',
@@ -288,44 +332,53 @@ export class MarketplaceController {
   @Put('listings/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Update listing by ID (Owner Only)' })
+  @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({
+    summary: 'Update listing dengan upload foto baru (Owner Only)',
+  })
   @ApiParam({
     name: 'id',
     description: 'Listing ID (UUID)',
     example: '650e8400-e29b-41d4-a716-446655440000',
   })
-  @ApiBody({ type: UpdateListingDto })
-  @ApiResponse({
-    status: 200,
-    description: 'Listing berhasil diupdate',
+  @ApiBody({
     schema: {
-      example: {
-        message: 'Listing berhasil diupdate',
-        data: {
-          id: '650e8400-e29b-41d4-a716-446655440000',
-          price: 145000000,
-          description: 'HARGA TURUN! Mobil terawat...',
-          updatedAt: '2025-12-21T14:30:00Z',
+      type: 'object',
+      properties: {
+        price: { type: 'number', example: 145000000 },
+        mileage: { type: 'number', example: 52000 },
+        description: {
+          type: 'string',
+          example: 'HARGA TURUN! Mobil terawat...',
+        },
+        taxStatus: { type: 'string', example: 'Pajak Hidup' },
+        isActive: { type: 'boolean', example: true },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Upload gambar baru (opsional, max 10 files)',
         },
       },
     },
   })
+  @ApiResponse({ status: 200, description: 'Listing berhasil diupdate' })
   @ApiResponse({ status: 404, description: 'Listing tidak ditemukan' })
   @ApiResponse({
     status: 403,
     description: 'Forbidden - Bukan pemilik listing',
   })
-  @ApiResponse({ status: 400, description: 'Validasi gagal' })
-  @ApiResponse({ status: 401, description: 'Unauthorized - Token tidak valid' })
   async update(
     @Param('id') id: string,
     @Request() req,
     @Body() updateListingDto: UpdateListingDto,
+    @UploadedFiles() files?: Express.Multer.File[],
   ) {
     return this.marketplaceService.update(
       id,
       req.user.userId,
       updateListingDto,
+      files,
     );
   }
 

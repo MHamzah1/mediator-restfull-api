@@ -2,9 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // ✅ Serve static files untuk uploaded images
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // ✅ Konfigurasi CORS
   app.enableCors({
@@ -64,7 +71,7 @@ async function bootstrap() {
     .addTag('Calculation History', 'Calculation history (NEW)')
     .addTag('Specifications', 'Specification management')
     .addTag('Custom Prices', 'Custom Price management')
-    .addTag('Marketplace', 'Marketplace listings')
+    .addTag('Marketplace Listings', 'Marketplace listings with image upload')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -80,6 +87,9 @@ async function bootstrap() {
   );
   console.log(
     `Swagger docs available at: http://localhost:${process.env.PORT ?? 3000}/api/docs`,
+  );
+  console.log(
+    `Uploaded files available at: http://localhost:${process.env.PORT ?? 3000}/uploads/`,
   );
 }
 bootstrap();

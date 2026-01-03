@@ -2,17 +2,15 @@ import {
   IsNotEmpty,
   IsString,
   IsNumber,
-  IsArray,
   IsOptional,
   IsUUID,
   Min,
   Max,
   MinLength,
-  ArrayMinSize,
-  ArrayMaxSize,
   Matches,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 export class CreateListingDto {
   @ApiProperty({
@@ -28,6 +26,7 @@ export class CreateListingDto {
     description: 'Tahun produksi mobil (1990-2025)',
   })
   @IsNotEmpty({ message: 'Tahun tidak boleh kosong' })
+  @Type(() => Number)
   @IsNumber({}, { message: 'Tahun harus berupa angka' })
   @Min(1990, { message: 'Tahun minimal 1990' })
   @Max(2025, { message: 'Tahun maksimal 2025' })
@@ -38,6 +37,7 @@ export class CreateListingDto {
     description: 'Harga jual mobil (minimal 1 juta)',
   })
   @IsNotEmpty({ message: 'Harga tidak boleh kosong' })
+  @Type(() => Number)
   @IsNumber({}, { message: 'Harga harus berupa angka' })
   @Min(1000000, { message: 'Harga minimal Rp 1.000.000' })
   price: number;
@@ -47,6 +47,7 @@ export class CreateListingDto {
     description: 'Kilometer mobil',
   })
   @IsNotEmpty({ message: 'Kilometer tidak boleh kosong' })
+  @Type(() => Number)
   @IsNumber({}, { message: 'Kilometer harus berupa angka' })
   @Min(0, { message: 'Kilometer tidak boleh negatif' })
   mileage: number;
@@ -124,21 +125,6 @@ export class CreateListingDto {
   @IsOptional()
   @IsString({ message: 'Status pajak harus berupa string' })
   taxStatus?: string;
-
-  @ApiProperty({
-    example: [
-      'https://cdn.example.com/car1-front.jpg',
-      'https://cdn.example.com/car1-back.jpg',
-      'https://cdn.example.com/car1-interior.jpg',
-    ],
-    description: 'Array URL gambar mobil (minimal 1, maksimal 10)',
-  })
-  @IsNotEmpty({ message: 'Gambar tidak boleh kosong' })
-  @IsArray({ message: 'Gambar harus berupa array' })
-  @ArrayMinSize(1, { message: 'Minimal 1 gambar diperlukan' })
-  @ArrayMaxSize(10, { message: 'Maksimal 10 gambar' })
-  @IsString({ each: true, message: 'Setiap gambar harus berupa URL string' })
-  images: string[];
 
   @ApiProperty({
     example: '6281234567890',

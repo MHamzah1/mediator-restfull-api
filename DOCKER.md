@@ -20,10 +20,13 @@ cp .env.example .env
 # 2. Edit .env dan masukkan kredensial Neon.tech kamu
 nano .env  # atau gunakan editor lain
 
-# 3. Build dan jalankan
+# 3. Buat folder uploads
+mkdir -p uploads/listings
+
+# 4. Build dan jalankan
 docker-compose up -d --build
 
-# 4. Cek logs
+# 5. Cek logs
 docker-compose logs -f api
 ```
 
@@ -32,16 +35,22 @@ docker-compose logs -f api
 ```bash
 # 1. Pastikan .env sudah terisi dengan kredensial Neon.tech
 
-# 2. Jalankan development mode
+# 2. Buat folder uploads
+mkdir -p uploads/listings
+
+# 3. Jalankan development mode
 docker-compose -f docker-compose.dev.yml up --build
 
-# 3. API akan auto-reload ketika ada perubahan code
+# 4. API akan auto-reload ketika ada perubahan code
 ```
 
 ### Mode 3: Full Local (PostgreSQL + API dalam Docker)
 
 ```bash
-# Jalankan dengan profile local-db
+# 1. Buat folder uploads
+mkdir -p uploads/listings
+
+# 2. Jalankan dengan profile local-db
 docker-compose -f docker-compose.dev.yml --profile local-db up api-local --build
 
 # Ini akan menjalankan:
@@ -59,21 +68,24 @@ docker-compose -f docker-compose.dev.yml --profile local-db up api-local --build
 ├── docker-compose.dev.yml # Development setup
 ├── .dockerignore        # Files to exclude from build
 ├── .env.example         # Environment template
-└── .env                 # Your actual config (tidak di-commit)
+├── .env                 # Your actual config (tidak di-commit)
+└── uploads/             # ✅ Uploaded files (persisted)
+    └── listings/        # Car listing images
 ```
 
 ## 🔧 Configuration
 
 ### Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `development` / `production` |
-| `PORT` | API port | `3000` |
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host/db` |
-| `JWT_SECRET` | Secret key untuk JWT | `your-secret-key` |
-| `JWT_EXPIRE_IN` | JWT expiration | `1d` |
-| `ENABLE_SWAGGER` | Enable Swagger docs | `true` |
+| Variable         | Description                   | Example                          |
+| ---------------- | ----------------------------- | -------------------------------- |
+| `NODE_ENV`       | Environment mode              | `development` / `production`     |
+| `PORT`           | API port                      | `3000`                           |
+| `DATABASE_URL`   | PostgreSQL connection string  | `postgresql://user:pass@host/db` |
+| `JWT_SECRET`     | Secret key untuk JWT          | `your-secret-key`                |
+| `JWT_EXPIRE_IN`  | JWT expiration                | `1d`                             |
+| `ENABLE_SWAGGER` | Enable Swagger docs           | `true`                           |
+| `BASE_URL`       | Base URL untuk uploaded files | `http://localhost:3000`          |
 
 ## 📝 Common Commands
 
@@ -129,13 +141,30 @@ docker exec mediator-postgres-dev pg_dump -U mediator mediator_db > backup.sql
 docker exec -i mediator-postgres-dev psql -U mediator mediator_db < backup.sql
 ```
 
+### 📸 File Upload Management
+
+```bash
+# Lihat uploaded files
+ls -lah uploads/listings/
+
+# Backup uploaded files
+tar -czf uploads-backup.tar.gz uploads/
+
+# Restore uploaded files
+tar -xzf uploads-backup.tar.gz
+
+# Hapus semua uploaded files (⚠️ hati-hati!)
+rm -rf uploads/listings/*
+```
+
 ## 🌐 Access Points
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| API | http://localhost:3000 | - |
-| Swagger Docs | http://localhost:3000/api/docs | - |
-| pgAdmin (local mode) | http://localhost:5050 | admin@mediator.com / admin123 |
+| Service              | URL                                               | Credentials                   |
+| -------------------- | ------------------------------------------------- | ----------------------------- |
+| API                  | http://localhost:3000                             | -                             |
+| Swagger Docs         | http://localhost:3000/api/docs                    | -                             |
+| Uploaded Files       | http://localhost:3000/uploads/listings/{filename} | -                             |
+| pgAdmin (local mode) | http://localhost:5050                             | admin@mediator.com / admin123 |
 
 ### pgAdmin Setup (untuk connect ke Neon.tech)
 
@@ -183,11 +212,34 @@ lsof -i :5432
 PORT=3001
 ```
 
-### Permission denied
+### Permission denied (uploads folder)
 
 ```bash
-# Fix permission untuk node_modules
-sudo chown -R $USER:$USER .
+# Fix permission untuk uploads
+sudo chown -R $USER:$USER uploads/
+chmod -R 755 uploads/
+
+# Atau di dalam container
+docker exec -it mediator-api-dev sh
+chown -R node:node /app/uploads
+```
+
+### Upload file tidak muncul
+
+```bash
+# Pastikan folder uploads ada
+mkdir -p uploads/listings
+
+# Cek apakah volume ter-mount
+docker inspect mediator-api-dev | grep -A 10 Mounts
+
+# Test upload via curl
+curl -X POST http://localhost:3000/api/marketplace/listings \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "images=@test-image.jpg" \
+  -F "carModelId=..." \
+  -F "year=2020" \
+  # ...other fields
 ```
 
 ## 🏗️ Production Deployment
@@ -233,6 +285,19 @@ curl http://localhost:3000
 docker inspect --format='{{.State.Health.Status}}' mediator-api
 ```
 
+## 🎯 File Upload Best Practices
+
+1. **Folder Structure**: `uploads/listings/{filename}.jpg`
+2. **Max File Size**: 5MB per file
+3. **Allowed Types**: JPG, JPEG, PNG, WEBP
+4. **Max Files per Listing**: 10 images
+5. **Backup Strategy**: Gunakan volume mount + external storage (S3/CloudFlare R2)
+
 ---
 
-💡 **Tips**: Untuk development, gunakan `docker-compose -f docker-compose.dev.yml up` agar mendapatkan hot reload. Perubahan code akan langsung ter-reflect tanpa rebuild.
+💡 **Tips**:
+
+- Untuk development, gunakan `docker-compose -f docker-compose.dev.yml up` agar mendapatkan hot reload
+- Folder `uploads/` akan persist meski container restart
+- Jangan commit folder `uploads/` ke git (sudah ada di .gitignore)
+- Untuk production, pertimbangkan gunakan S3/CloudFlare R2 untuk file storage

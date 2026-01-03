@@ -12,7 +12,8 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { FilterListingDto } from './dto/filter-listing.dto';
 import { Listing } from 'src/entities/listing.entity';
-
+import * as fs from 'fs';
+import * as path from 'path';
 @Injectable()
 export class MarketplaceService {
   constructor(
@@ -23,6 +24,21 @@ export class MarketplaceService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
   ) {}
+
+  // Helper untuk menghasilkan URL gambar
+  private generateImageUrls(files: Express.Multer.File[]): string[] {
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    return files.map((file) => `${baseUrl}/uploads/listings/${file.filename}`);
+  }
+
+  private deleteFiles(filePaths: string[]): void {
+    filePaths.forEach((filePath) => {
+      const fullPath = path.join('./uploads/listings', path.basename(filePath));
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+      }
+    });
+  }
 
   // Helper untuk menghitung date range berdasarkan periode
   private getDateRangeFromPeriode(periode: string): {
@@ -106,8 +122,8 @@ export class MarketplaceService {
   async create(
     userId: string,
     createListingDto: CreateListingDto,
+    files: Express.Multer.File[],
   ): Promise<{ message: string; data: Listing }> {
-    // Cek apakah car model exists dan aktif
     const carModel = await this.carModelRepository.findOne({
       where: { id: createListingDto.carModelId },
       relations: ['brand'],
@@ -121,7 +137,6 @@ export class MarketplaceService {
       throw new BadRequestException('Model mobil tidak aktif');
     }
 
-    // Cek apakah user exists
     const user = await this.userRepository.findOne({
       where: { id: userId },
     });
@@ -130,10 +145,13 @@ export class MarketplaceService {
       throw new NotFoundException('User tidak ditemukan');
     }
 
-    // Create listing
+    // Generate image URLs dari uploaded files
+    const imageUrls = this.generateImageUrls(files);
+
     const listing = this.listingRepository.create({
       ...createListingDto,
       sellerId: userId,
+      images: imageUrls,
     });
 
     const savedListing = await this.listingRepository.save(listing);
@@ -364,6 +382,7 @@ export class MarketplaceService {
     id: string,
     userId: string,
     updateListingDto: UpdateListingDto,
+    files?: Express.Multer.File[],
   ): Promise<{ message: string; data: Listing }> {
     const listing = await this.listingRepository.findOne({
       where: { id },
@@ -374,14 +393,22 @@ export class MarketplaceService {
       throw new NotFoundException('Listing tidak ditemukan');
     }
 
-    // Check ownership
     if (listing.sellerId !== userId) {
       throw new ForbiddenException(
         'Anda tidak memiliki akses untuk mengupdate listing ini',
       );
     }
 
-    // Update listing
+    // Jika ada file baru diupload
+    if (files && files.length > 0) {
+      // Hapus gambar lama
+      this.deleteFiles(listing.images);
+
+      // Generate URL gambar baru
+      const newImageUrls = this.generateImageUrls(files);
+      updateListingDto.images = newImageUrls;
+    }
+
     Object.assign(listing, updateListingDto);
     const updatedListing = await this.listingRepository.save(listing);
 
@@ -403,12 +430,14 @@ export class MarketplaceService {
       throw new NotFoundException('Listing tidak ditemukan');
     }
 
-    // Check ownership
     if (listing.sellerId !== userId) {
       throw new ForbiddenException(
         'Anda tidak memiliki akses untuk menghapus listing ini',
       );
     }
+
+    // Hapus file gambar
+    this.deleteFiles(listing.images);
 
     await this.listingRepository.delete(id);
 
@@ -526,7 +555,9 @@ export class MarketplaceService {
     }
 
     // Generate pre-filled message
-    const formattedPrice = new Intl.NumberFormat('id-ID').format(Number(listing.price));
+    const formattedPrice = new Intl.NumberFormat('id-ID').format(
+      Number(listing.price),
+    );
     const preFilledMessage = `Halo, saya tertarik dengan mobil ${listing.carModel.brand.name} ${listing.carModel.modelName} ${listing.year} seharga Rp ${formattedPrice}. Apakah masih tersedia?`;
 
     const encodedMessage = encodeURIComponent(preFilledMessage);
