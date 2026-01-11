@@ -13,14 +13,9 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
-  // ✅ Konfigurasi CORS
+  // ✅ Konfigurasi CORS - ALLOW ALL
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3000/api/docs',
-      'http://127.0.0.1:3000',
-    ],
+    origin: true, // ✅ Izinkan semua origin
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
