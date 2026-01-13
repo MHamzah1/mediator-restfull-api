@@ -43,7 +43,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=8080
 
 # Copy production dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -63,14 +63,14 @@ RUN chown -R nestjs:nodejs /app
 USER nestjs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # ✅ Define volume for persistent uploads
 VOLUME ["/app/uploads"]
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1
 
 # Start the application
 CMD ["node", "dist/main"]

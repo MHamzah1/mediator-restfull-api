@@ -76,15 +76,15 @@ async function bootstrap() {
     },
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 8080);
   console.log(
-    `Application is running on: http://localhost:${process.env.PORT ?? 3000}`,
+    `Application is running on: http://localhost:${process.env.PORT ?? 8080}`,
   );
   console.log(
-    `Swagger docs available at: http://localhost:${process.env.PORT ?? 3000}/api/docs`,
+    `Swagger docs available at: http://localhost:${process.env.PORT ?? 8080}/api/docs`,
   );
   console.log(
-    `Uploaded files available at: http://localhost:${process.env.PORT ?? 3000}/uploads/`,
+    `Uploaded files available at: http://localhost:${process.env.PORT ?? 8080}/uploads/`,
   );
 }
 bootstrap();

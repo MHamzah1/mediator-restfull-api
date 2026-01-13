@@ -46,14 +46,14 @@ services:
       - .env
     environment:
       NODE_ENV: development
-      PORT: 3000
+      PORT: 8080
     volumes:
       - .:/app
       - /app/node_modules
       # ✅ Mount uploads folder untuk persist files
       - ./uploads:/app/uploads
     ports:
-      - '${PORT:-3000}:3000'
+      - '${PORT:-8080}:8080'
     networks:
       - mediator-network-dev
     command: npm run start:dev
@@ -69,7 +69,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: development
-      PORT: 3000
+      PORT: 8080
       DATABASE_URL: postgresql://mediator:mediator123@postgres:5432/mediator_db
       JWT_SECRET: dev-local-secret-key
       JWT_EXPIRE_IN: 1d
@@ -79,7 +79,7 @@ services:
       # ✅ Mount uploads folder untuk persist files
       - ./uploads:/app/uploads
     ports:
-      - '3000:3000'
+      - '8080:8080'
     networks:
       - mediator-network-dev
     depends_on:
