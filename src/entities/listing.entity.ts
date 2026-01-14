@@ -170,6 +170,40 @@ export class Listing {
   @Column({ default: 0 })
   contactClickCount: number;
 
+  // ============ FEATURED/BOOST FIELDS ============
+
+  @ApiProperty({
+    example: false,
+    description: 'Apakah listing sedang dalam status unggulan/featured',
+  })
+  @Column({ default: false })
+  isFeatured: boolean;
+
+  @ApiProperty({
+    example: '2026-01-17T00:00:00Z',
+    description: 'Tanggal berakhirnya status featured',
+    nullable: true,
+  })
+  @Column({ nullable: true })
+  featuredUntil: Date;
+
+  @ApiProperty({
+    example: 20,
+    description: 'Priority score untuk sorting featured listings',
+  })
+  @Column({ default: 0 })
+  featuredPriority: number;
+
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Current active boost transaction ID',
+    nullable: true,
+  })
+  @Column({ nullable: true })
+  currentBoostId: string;
+
+  // ============ END FEATURED/BOOST FIELDS ============
+
   @ApiProperty({
     example: '2025-12-21T10:30:00Z',
     description: 'Tanggal dibuat',

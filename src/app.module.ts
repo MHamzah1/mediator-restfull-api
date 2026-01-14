@@ -19,6 +19,9 @@ import { PriceAdjustmentModule } from './PriceAdjustment/price-adjustment.module
 import { PriceCalculatorModule } from './PriceCalculator/price-calculator.module';
 import { CalculationHistoryModule } from './CalculationHistory/calculation-history.module';
 
+// Boost/Featured Listings Module
+import { BoostModule } from './Boost/boost.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +47,8 @@ import { CalculationHistoryModule } from './CalculationHistory/calculation-histo
     PriceAdjustmentModule,
     PriceCalculatorModule,
     CalculationHistoryModule,
+    // Boost/Featured Module
+    BoostModule,
   ],
   controllers: [AppController],
   providers: [AppService],

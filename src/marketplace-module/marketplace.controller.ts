@@ -120,9 +120,51 @@ export class MarketplaceController {
       files,
     );
   }
+
+  @Get('featured')
+  @ApiOperation({
+    summary: 'Get featured/unggulan listings (Public)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List mobil unggulan',
+    schema: {
+      example: {
+        message: 'Berhasil mengambil mobil unggulan',
+        data: [
+          {
+            id: '650e8400-e29b-41d4-a716-446655440000',
+            carModel: {
+              modelName: 'Avanza',
+              brand: { name: 'Toyota', logo: 'https://...' },
+            },
+            year: 2023,
+            price: 228000000,
+            mileage: 15000,
+            transmission: 'manual',
+            fuelType: 'bensin',
+            color: 'Hitam',
+            locationCity: 'Jakarta Selatan',
+            images: ['https://...'],
+            isFeatured: true,
+            featuredBadge: 'Populer',
+            featuredUntil: '2026-01-17T00:00:00Z',
+          },
+        ],
+        total: 5,
+      },
+    },
+  })
+  async findFeatured(
+    @Query('limit') limit?: number,
+    @Query('category') category?: string,
+  ) {
+    return this.marketplaceService.findFeatured(limit || 10, category);
+  }
+
   @Get('listings')
   @ApiOperation({
-    summary: 'Get all listings dengan pagination dan filter (Public)',
+    summary: 'Get all listings dengan pagination dan filter (Public) - Featured listings muncul pertama',
   })
   @ApiResponse({
     status: 200,

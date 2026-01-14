@@ -302,26 +302,35 @@ export class MarketplaceService {
       queryBuilder.andWhere('listing.createdAt <= :end', { end });
     }
 
-    // Sorting preset atau manual
+    // FEATURED FIRST: Always prioritize featured listings
+    // Featured listings dengan featuredUntil > now akan muncul pertama
+    queryBuilder.addOrderBy(
+      `CASE WHEN listing.isFeatured = true AND listing.featuredUntil > NOW() THEN 0 ELSE 1 END`,
+      'ASC',
+    );
+    // Then sort by featured priority (higher priority first)
+    queryBuilder.addOrderBy('listing.featuredPriority', 'DESC');
+
+    // Sorting preset atau manual (secondary sort)
     if (sortBy) {
       switch (sortBy) {
         case 'price_asc':
-          queryBuilder.orderBy('listing.price', 'ASC');
+          queryBuilder.addOrderBy('listing.price', 'ASC');
           break;
         case 'price_desc':
-          queryBuilder.orderBy('listing.price', 'DESC');
+          queryBuilder.addOrderBy('listing.price', 'DESC');
           break;
         case 'newest':
-          queryBuilder.orderBy('listing.createdAt', 'DESC');
+          queryBuilder.addOrderBy('listing.createdAt', 'DESC');
           break;
         case 'oldest':
-          queryBuilder.orderBy('listing.createdAt', 'ASC');
+          queryBuilder.addOrderBy('listing.createdAt', 'ASC');
           break;
         case 'mileage':
-          queryBuilder.orderBy('listing.mileage', 'ASC');
+          queryBuilder.addOrderBy('listing.mileage', 'ASC');
           break;
         default:
-          queryBuilder.orderBy('listing.createdAt', 'DESC');
+          queryBuilder.addOrderBy('listing.createdAt', 'DESC');
       }
     } else {
       // Manual sorting
@@ -335,7 +344,7 @@ export class MarketplaceService {
       const orderField = validOrderFields.includes(orderBy)
         ? orderBy
         : 'createdAt';
-      queryBuilder.orderBy(`listing.${orderField}`, sortDirection);
+      queryBuilder.addOrderBy(`listing.${orderField}`, sortDirection);
     }
 
     // Pagination
@@ -585,5 +594,81 @@ export class MarketplaceService {
         price: listing.price,
       },
     };
+  }
+
+  // ============ FEATURED LISTINGS METHODS ============
+
+  async findFeatured(limit: number = 10, category?: string) {
+    const now = new Date();
+
+    const queryBuilder = this.listingRepository.createQueryBuilder('listing');
+
+    // Join dengan carModel, brand, dan seller
+    queryBuilder
+      .leftJoinAndSelect('listing.carModel', 'carModel')
+      .leftJoinAndSelect('carModel.brand', 'brand')
+      .leftJoinAndSelect('listing.seller', 'seller');
+
+    // Only active listings
+    queryBuilder.andWhere('listing.isActive = :isActive', { isActive: true });
+
+    // Only featured listings with valid featuredUntil
+    queryBuilder.andWhere('listing.isFeatured = :isFeatured', { isFeatured: true });
+    queryBuilder.andWhere('listing.featuredUntil > :now', { now });
+
+    // Filter by category if provided (based on car type/category if you have it)
+    // This can be expanded based on your data model
+
+    // Order by priority (higher first), then by featuredUntil (ending soon first)
+    queryBuilder.orderBy('listing.featuredPriority', 'DESC');
+    queryBuilder.addOrderBy('listing.featuredUntil', 'ASC');
+
+    // Limit results
+    queryBuilder.take(limit);
+
+    const data = await queryBuilder.getMany();
+
+    // Add featured badge info
+    const dataWithBadge = data.map(listing => ({
+      ...listing,
+      featuredBadge: this.getFeaturedBadge(listing.featuredPriority),
+    }));
+
+    return {
+      message: 'Berhasil mengambil mobil unggulan',
+      data: dataWithBadge,
+      total: data.length,
+    };
+  }
+
+  private getFeaturedBadge(priority: number): string {
+    if (priority >= 50) return 'Premium';
+    if (priority >= 30) return 'Unggulan';
+    if (priority >= 10) return 'Populer';
+    return 'Featured';
+  }
+
+  // Method to check and update expired featured status
+  async checkAndExpireFeaturedListings() {
+    const now = new Date();
+
+    // Find listings where featuredUntil has passed but isFeatured is still true
+    const expiredListings = await this.listingRepository
+      .createQueryBuilder('listing')
+      .where('listing.isFeatured = :isFeatured', { isFeatured: true })
+      .andWhere('listing.featuredUntil < :now', { now })
+      .getMany();
+
+    // Update expired listings
+    for (const listing of expiredListings) {
+      await this.listingRepository.update(listing.id, {
+        isFeatured: false,
+        featuredUntil: null,
+        featuredPriority: 0,
+        currentBoostId: null,
+      });
+    }
+
+    return { expiredCount: expiredListings.length };
   }
 }
