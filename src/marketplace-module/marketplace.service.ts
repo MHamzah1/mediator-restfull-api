@@ -304,7 +304,7 @@ export class MarketplaceService {
 
     // FEATURED FIRST: Always prioritize featured listings
     // Featured listings dengan featuredUntil > now akan muncul pertama
-    queryBuilder.addOrderBy(
+    queryBuilder.addSelect(
       `CASE WHEN listing.isFeatured = true AND listing.featuredUntil > NOW() THEN 0 ELSE 1 END`,
       'ASC',
     );
@@ -613,7 +613,9 @@ export class MarketplaceService {
     queryBuilder.andWhere('listing.isActive = :isActive', { isActive: true });
 
     // Only featured listings with valid featuredUntil
-    queryBuilder.andWhere('listing.isFeatured = :isFeatured', { isFeatured: true });
+    queryBuilder.andWhere('listing.isFeatured = :isFeatured', {
+      isFeatured: true,
+    });
     queryBuilder.andWhere('listing.featuredUntil > :now', { now });
 
     // Filter by category if provided (based on car type/category if you have it)
@@ -629,7 +631,7 @@ export class MarketplaceService {
     const data = await queryBuilder.getMany();
 
     // Add featured badge info
-    const dataWithBadge = data.map(listing => ({
+    const dataWithBadge = data.map((listing) => ({
       ...listing,
       featuredBadge: this.getFeaturedBadge(listing.featuredPriority),
     }));

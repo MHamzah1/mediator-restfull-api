@@ -164,7 +164,8 @@ export class MarketplaceController {
 
   @Get('listings')
   @ApiOperation({
-    summary: 'Get all listings dengan pagination dan filter (Public) - Featured listings muncul pertama',
+    summary:
+      'Get all listings dengan pagination dan filter (Public) - Featured listings muncul pertama',
   })
   @ApiResponse({
     status: 200,
