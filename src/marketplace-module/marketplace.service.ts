@@ -27,8 +27,8 @@ export class MarketplaceService {
 
   // Helper untuk menghasilkan URL gambar
   private generateImageUrls(files: Express.Multer.File[]): string[] {
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-    return files.map((file) => `${baseUrl}/uploads/listings/${file.filename}`);
+    // Hanya simpan filename relatif, tanpa full URL
+    return files.map((file) => `/listings/${file.filename}`);
   }
 
   private deleteFiles(filePaths: string[]): void {

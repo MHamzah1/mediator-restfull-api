@@ -55,7 +55,7 @@ docker-compose -f docker-compose.dev.yml --profile local-db up api-local --build
 
 # Ini akan menjalankan:
 # - PostgreSQL container (port 5432)
-# - API container dengan hot reload (port 3000)
+# - API container dengan hot reload (port 8080)
 # - pgAdmin untuk manage database (port 5050)
 ```
 
@@ -80,12 +80,12 @@ docker-compose -f docker-compose.dev.yml --profile local-db up api-local --build
 | Variable         | Description                   | Example                          |
 | ---------------- | ----------------------------- | -------------------------------- |
 | `NODE_ENV`       | Environment mode              | `development` / `production`     |
-| `PORT`           | API port                      | `3000`                           |
+| `PORT`           | API port                      | `8080`                           |
 | `DATABASE_URL`   | PostgreSQL connection string  | `postgresql://user:pass@host/db` |
 | `JWT_SECRET`     | Secret key untuk JWT          | `your-secret-key`                |
 | `JWT_EXPIRE_IN`  | JWT expiration                | `1d`                             |
 | `ENABLE_SWAGGER` | Enable Swagger docs           | `true`                           |
-| `BASE_URL`       | Base URL untuk uploaded files | `http://localhost:3000`          |
+| `BASE_URL`       | Base URL untuk uploaded files | `http://localhost:8080`          |
 
 ## 📝 Common Commands
 
@@ -161,9 +161,9 @@ rm -rf uploads/listings/*
 
 | Service              | URL                                               | Credentials                   |
 | -------------------- | ------------------------------------------------- | ----------------------------- |
-| API                  | http://localhost:3000                             | -                             |
-| Swagger Docs         | http://localhost:3000/api/docs                    | -                             |
-| Uploaded Files       | http://localhost:3000/uploads/listings/{filename} | -                             |
+| API                  | http://localhost:8080                             | -                             |
+| Swagger Docs         | http://localhost:8080/api/docs                    | -                             |
+| Uploaded Files       | http://localhost:8080/uploads/listings/{filename} | -                             |
 | pgAdmin (local mode) | http://localhost:5050                             | admin@mediator.com / admin123 |
 
 ### pgAdmin Setup (untuk connect ke Neon.tech)
@@ -205,7 +205,7 @@ docker exec mediator-postgres-dev pg_isready
 
 ```bash
 # Cek port yang digunakan
-lsof -i :3000
+lsof -i :8080
 lsof -i :5432
 
 # Ganti port di .env atau docker-compose
@@ -234,7 +234,7 @@ mkdir -p uploads/listings
 docker inspect mediator-api-dev | grep -A 10 Mounts
 
 # Test upload via curl
-curl -X POST http://localhost:3000/api/marketplace/listings \
+curl -X POST http://localhost:8080/api/marketplace/listings \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -F "images=@test-image.jpg" \
   -F "carModelId=..." \
@@ -279,7 +279,7 @@ API menyediakan health check endpoint:
 
 ```bash
 # Check API health
-curl http://localhost:3000
+curl http://localhost:8080
 
 # Docker health status
 docker inspect --format='{{.State.Health.Status}}' mediator-api
