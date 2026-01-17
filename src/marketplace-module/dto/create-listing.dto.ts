@@ -30,7 +30,7 @@ export class CreateListingDto {
   @Type(() => Number)
   @IsNumber({}, { message: 'Tahun harus berupa angka' })
   @Min(1990, { message: 'Tahun minimal 1990' })
-  @Max(2025, { message: 'Tahun maksimal 2025' })
+  @Max(2026, { message: 'Tahun maksimal 2025' })
   year: number;
 
   @ApiProperty({
