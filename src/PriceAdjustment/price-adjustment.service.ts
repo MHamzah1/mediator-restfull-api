@@ -46,12 +46,19 @@ export class PriceAdjustmentService {
       },
     });
     if (existing) {
-      throw new ConflictException('Adjustment dengan kombinasi model, category, dan code sudah ada');
+      throw new ConflictException(
+        'Adjustment dengan kombinasi model, category, dan code sudah ada',
+      );
     }
 
     // Validate colorHex for color category
-    if (createDto.category === AdjustmentCategory.COLOR && !createDto.colorHex) {
-      throw new BadRequestException('colorHex wajib diisi untuk category color');
+    if (
+      createDto.category === AdjustmentCategory.COLOR &&
+      !createDto.colorHex
+    ) {
+      throw new BadRequestException(
+        'colorHex wajib diisi untuk category color',
+      );
     }
 
     const adjustment = this.priceAdjustmentRepository.create({
@@ -145,7 +152,9 @@ export class PriceAdjustmentService {
         name: adj.name,
         adjustmentValue: Number(adj.adjustmentValue),
         isBaseline: adj.isBaseline,
-        ...(adj.category === AdjustmentCategory.COLOR && { colorHex: adj.colorHex }),
+        ...(adj.category === AdjustmentCategory.COLOR && {
+          colorHex: adj.colorHex,
+        }),
       };
       grouped[adj.category].push(item);
     }
@@ -159,15 +168,10 @@ export class PriceAdjustmentService {
   }
 
   async findAll(queryDto: QueryPriceAdjustmentDto) {
-    const {
-      page = 1,
-      perPage = 10,
-      modelId,
-      category,
-      isActive,
-    } = queryDto;
+    const { page = 1, perPage = 10, modelId, category, isActive } = queryDto;
 
-    const qb = this.priceAdjustmentRepository.createQueryBuilder('pa')
+    const qb = this.priceAdjustmentRepository
+      .createQueryBuilder('pa')
       .leftJoinAndSelect('pa.model', 'model')
       .leftJoinAndSelect('model.brand', 'brand');
 

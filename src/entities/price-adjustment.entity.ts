@@ -12,9 +12,16 @@ import { ApiProperty } from '@nestjs/swagger';
 import { CarModel } from './car-model.entity';
 
 export enum AdjustmentCategory {
-  TRANSMISSION = 'transmission',
-  OWNERSHIP = 'ownership',
-  COLOR = 'color',
+  OWNERSHIP = 'ownership', // Ex: atas nama PT, instansi, pribadi
+  COLOR = 'color', // Ex: warna khusus + biaya tambahan
+  FEATURE = 'feature', // Ex: Luxury package, Head Unit, Jok kulit
+  CONDITION = 'condition', // Ex: Cat ulang, body repair, lecet
+  KILOMETER = 'kilometer', // Ex: <10rb km (naik harga), >100rb km (turun harga)
+  ACCIDENT_HISTORY = 'accident_history', // Ex: bekas tabrakan (pengurangan)
+  DOCUMENT = 'document', // Ex: STNK hilang, BPKB belum keluar
+  WARRANTY = 'warranty', // Ex: Masih ada garansi resmi (menaikkan harga)
+  SERVICE_RECORD = 'service_record', // Ex: lengkap vs tidak lengkap
+  LOCATION = 'location', // Ex: mobil luar Jakarta, luar pulau
 }
 
 export enum AdjustmentType {
@@ -52,7 +59,11 @@ export class PriceAdjustment {
   @Column()
   name: string;
 
-  @ApiProperty({ example: '#ffffff', description: 'Hex color (untuk category color)', nullable: true })
+  @ApiProperty({
+    example: '#ffffff',
+    description: 'Hex color (untuk category color)',
+    nullable: true,
+  })
   @Column({ nullable: true })
   colorHex: string;
 

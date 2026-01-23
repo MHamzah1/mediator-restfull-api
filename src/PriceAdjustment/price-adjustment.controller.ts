@@ -32,7 +32,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 @ApiTags('Price Adjustments')
 @Controller('api')
 export class PriceAdjustmentController {
-  constructor(private readonly priceAdjustmentService: PriceAdjustmentService) {}
+  constructor(
+    private readonly priceAdjustmentService: PriceAdjustmentService,
+  ) {}
 
   @Get('car-models/:modelId/price-adjustments')
   @ApiOperation({ summary: 'Get price adjustments by model (ENDPOINT UTAMA)' })
@@ -47,8 +49,20 @@ export class PriceAdjustmentController {
         brandName: 'Toyota',
         adjustments: {
           transmission: [
-            { id: 'uuid', code: 'matic', name: 'Transmisi Matic', adjustmentValue: 0, isBaseline: true },
-            { id: 'uuid', code: 'manual', name: 'Transmisi Manual', adjustmentValue: -5000000, isBaseline: false },
+            {
+              id: 'uuid',
+              code: 'matic',
+              name: 'Transmisi Matic',
+              adjustmentValue: 0,
+              isBaseline: true,
+            },
+            {
+              id: 'uuid',
+              code: 'manual',
+              name: 'Transmisi Manual',
+              adjustmentValue: -5000000,
+              isBaseline: false,
+            },
           ],
           ownership: [],
           color: [],
@@ -65,8 +79,17 @@ export class PriceAdjustmentController {
   @ApiOperation({ summary: 'Get all price adjustments' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'pageSize', required: false, type: Number })
-  @ApiQuery({ name: 'modelId', required: false, type: String, description: 'Filter by model (WAJIB)' })
-  @ApiQuery({ name: 'category', required: false, enum: ['transmission', 'ownership', 'color'] })
+  @ApiQuery({
+    name: 'modelId',
+    required: false,
+    type: String,
+    description: 'Filter by model (WAJIB)',
+  })
+  @ApiQuery({
+    name: 'category',
+    required: false,
+    enum: ['transmission', 'ownership', 'color'],
+  })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   @ApiResponse({ status: 200, description: 'List of price adjustments' })
   async findAll(@Query() queryDto: QueryPriceAdjustmentDto) {
@@ -97,7 +120,9 @@ export class PriceAdjustmentController {
   @Post('car-models/:modelId/price-adjustments/bulk')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Bulk create price adjustments for model (Admin Only)' })
+  @ApiOperation({
+    summary: 'Bulk create price adjustments for model (Admin Only)',
+  })
   @ApiParam({ name: 'modelId', description: 'Car Model ID' })
   @ApiResponse({
     status: 201,
