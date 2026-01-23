@@ -84,7 +84,18 @@ export class PriceAdjustmentService {
     }
 
     const created: PriceAdjustment[] = [];
-    const categories = { transmission: 0, ownership: 0, color: 0 };
+    const categories = {
+      ownership: 0,
+      color: 0,
+      feature: 0,
+      condition: 0,
+      kilometer: 0,
+      accident_history: 0,
+      document: 0,
+      warranty: 0,
+      service_record: 0,
+      location: 0,
+    };
 
     for (const item of bulkDto.adjustments) {
       const existing = await this.priceAdjustmentRepository.findOne({
@@ -140,9 +151,16 @@ export class PriceAdjustmentService {
 
     // Group by category
     const grouped = {
-      transmission: [] as any[],
       ownership: [] as any[],
       color: [] as any[],
+      feature: [] as any[],
+      condition: [] as any[],
+      kilometer: [] as any[],
+      accident_history: [] as any[],
+      document: [] as any[],
+      warranty: [] as any[],
+      service_record: [] as any[],
+      location: [] as any[],
     };
 
     for (const adj of adjustments) {

@@ -23,22 +23,26 @@ export class CalculatePriceDto {
   @Max(2030)
   year: number;
 
-  @ApiProperty({ example: 'matic', description: 'Kode transmisi' })
-  @IsNotEmpty()
-  @IsString()
-  transmissionCode: string;
-
   @ApiProperty({ example: 'personal', description: 'Kode kepemilikan' })
   @IsNotEmpty()
   @IsString()
   ownershipCode: string;
 
-  @ApiProperty({ example: 'hitam', description: 'Kode warna' })
+  @ApiProperty({ example: 'ice_blue', description: 'Kode warna' })
   @IsNotEmpty()
   @IsString()
   colorCode: string;
 
-  @ApiProperty({ example: [], description: 'Custom Price IDs (optional)', required: false })
+  @ApiProperty({ example: 'luxury', description: 'Kode feature' })
+  @IsNotEmpty()
+  @IsString()
+  featureCode: string;
+
+  @ApiProperty({
+    example: [],
+    description: 'Custom Price IDs (optional)',
+    required: false,
+  })
   @IsOptional()
   @IsArray()
   customPriceIds?: string[];

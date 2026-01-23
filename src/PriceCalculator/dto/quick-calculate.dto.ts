@@ -16,18 +16,18 @@ export class QuickCalculateDto {
   @Max(2030)
   year: number;
 
-  @ApiProperty({ example: 'matic' })
-  @IsNotEmpty()
-  @IsString()
-  transmission: string;
-
-  @ApiProperty({ example: 'personal' })
+  @ApiProperty({ example: 'personal', description: 'Kode kepemilikan' })
   @IsNotEmpty()
   @IsString()
   ownership: string;
 
-  @ApiProperty({ example: 'hitam' })
+  @ApiProperty({ example: 'ice_blue', description: 'Kode warna' })
   @IsNotEmpty()
   @IsString()
   color: string;
+
+  @ApiProperty({ example: 'luxury', description: 'Kode feature (optional)' })
+  @IsNotEmpty()
+  @IsString()
+  feature: string;
 }

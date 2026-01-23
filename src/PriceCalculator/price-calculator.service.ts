@@ -8,7 +8,10 @@ import { Repository } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Variant } from '../entities/variant.entity';
 import { YearPrice } from '../entities/year-price.entity';
-import { PriceAdjustment, AdjustmentCategory } from '../entities/price-adjustment.entity';
+import {
+  PriceAdjustment,
+  AdjustmentCategory,
+} from '../entities/price-adjustment.entity';
 import { Brand } from '../entities/brand.entity';
 import { CarModel } from '../entities/car-model.entity';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
@@ -48,22 +51,16 @@ export class PriceCalculatorService {
       },
     });
     if (!yearPrice) {
-      throw new NotFoundException(`Harga untuk tahun ${calculateDto.year} tidak ditemukan`);
+      throw new NotFoundException(
+        `Harga untuk tahun ${calculateDto.year} tidak ditemukan`,
+      );
     }
 
     const modelId = variant.modelId;
     const basePrice = Number(yearPrice.basePrice);
 
     // Get adjustments
-    const [transmissionAdj, ownershipAdj, colorAdj] = await Promise.all([
-      this.priceAdjustmentRepository.findOne({
-        where: {
-          modelId,
-          category: AdjustmentCategory.TRANSMISSION,
-          code: calculateDto.transmissionCode,
-          isActive: true,
-        },
-      }),
+    const [ownershipAdj, colorAdj, featureAdj] = await Promise.all([
       this.priceAdjustmentRepository.findOne({
         where: {
           modelId,
@@ -80,22 +77,37 @@ export class PriceCalculatorService {
           isActive: true,
         },
       }),
+      this.priceAdjustmentRepository.findOne({
+        where: {
+          modelId,
+          category: AdjustmentCategory.FEATURE,
+          code: calculateDto.featureCode,
+          isActive: true,
+        },
+      }),
     ]);
 
-    if (!transmissionAdj) {
-      throw new BadRequestException(`Kode transmisi '${calculateDto.transmissionCode}' tidak valid untuk model ini`);
-    }
     if (!ownershipAdj) {
-      throw new BadRequestException(`Kode kepemilikan '${calculateDto.ownershipCode}' tidak valid untuk model ini`);
+      throw new BadRequestException(
+        `Kode kepemilikan '${calculateDto.ownershipCode}' tidak valid untuk model ini`,
+      );
     }
     if (!colorAdj) {
-      throw new BadRequestException(`Kode warna '${calculateDto.colorCode}' tidak valid untuk model ini`);
+      throw new BadRequestException(
+        `Kode warna '${calculateDto.colorCode}' tidak valid untuk model ini`,
+      );
+    }
+    if (!featureAdj) {
+      throw new BadRequestException(
+        `Kode fitur tambahan '${calculateDto.featureCode}' tidak valid untuk model ini`,
+      );
     }
 
-    const transmissionAmount = Number(transmissionAdj.adjustmentValue);
     const ownershipAmount = Number(ownershipAdj.adjustmentValue);
     const colorAmount = Number(colorAdj.adjustmentValue);
-    const totalAdjustments = transmissionAmount + ownershipAmount + colorAmount;
+    const featureAmount = Number(featureAdj.adjustmentValue);
+    const totalAdjustments = ownershipAmount + colorAmount + featureAmount;
+
     const finalPrice = basePrice + totalAdjustments;
 
     // Price range +/- 5%
@@ -117,10 +129,6 @@ export class PriceCalculatorService {
         year: calculateDto.year,
       },
       conditions: {
-        transmission: {
-          code: transmissionAdj.code,
-          name: transmissionAdj.name,
-        },
         ownership: {
           code: ownershipAdj.code,
           name: ownershipAdj.name,
@@ -130,13 +138,29 @@ export class PriceCalculatorService {
           name: colorAdj.name,
           colorHex: colorAdj.colorHex,
         },
+        feature: {
+          code: featureAdj.code,
+          name: featureAdj.name,
+        },
       },
       priceBreakdown: {
         basePrice,
         adjustments: [
-          { category: 'transmission', name: transmissionAdj.name, amount: transmissionAmount },
-          { category: 'ownership', name: ownershipAdj.name, amount: ownershipAmount },
-          { category: 'color', name: colorAdj.name, amount: colorAmount },
+          {
+            category: 'ownership',
+            name: ownershipAdj.name,
+            amount: ownershipAmount,
+          },
+          {
+            category: 'color',
+            name: colorAdj.name,
+            amount: colorAmount,
+          },
+          {
+            category: 'feature',
+            name: featureAdj.name,
+            amount: featureAmount,
+          },
         ],
         totalAdjustments,
       },
@@ -153,9 +177,9 @@ export class PriceCalculatorService {
     const result = await this.calculate({
       variantId: quickDto.variantId,
       year: quickDto.year,
-      transmissionCode: quickDto.transmission,
       ownershipCode: quickDto.ownership,
       colorCode: quickDto.color,
+      featureCode: quickDto.feature,
     });
 
     const carName = `${result.car.brandName} ${result.car.modelName} ${result.car.variantName} ${result.car.year}`;

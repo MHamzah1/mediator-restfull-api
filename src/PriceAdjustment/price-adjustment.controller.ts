@@ -88,7 +88,18 @@ export class PriceAdjustmentController {
   @ApiQuery({
     name: 'category',
     required: false,
-    enum: ['transmission', 'ownership', 'color'],
+    enum: [
+      'ownership',
+      'color',
+      'feature',
+      'condition',
+      'kilometer',
+      'accident_history',
+      'document',
+      'warranty',
+      'service_record',
+      'location',
+    ],
   })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean })
   @ApiResponse({ status: 200, description: 'List of price adjustments' })
