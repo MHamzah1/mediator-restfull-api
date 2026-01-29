@@ -1,11 +1,38 @@
-version: '3.8'
+version: "3.8"
 
 # ============================================
 # Production Configuration
 # Menggunakan Neon.tech (External PostgreSQL)
+# Dengan Tailscale Integration
 # ============================================
 
 services:
+  # ============================================
+  # Tailscale Sidecar Container
+  # Memberikan akses ke API via Tailscale network
+  # ============================================
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: mediator-tailscale
+    hostname: mediator-api
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=tskey-auth-ky1bvkPizJ11CNTRL-swpT9rjmWniuxUeV7p2Eni8HZvoLckpuf
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    networks:
+      - mediator-network
+    healthcheck:
+      test: ["CMD", "tailscale", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # ============================================
   # NestJS API Application
   # ============================================
@@ -20,8 +47,16 @@ services:
     environment:
       NODE_ENV: production
       PORT: 8080
+      # ✅ Database Configuration (Neon.tech)
+      DATABASE_URL: postgresql://neondb_owner:npg_yYXxmMOc7qZ3@ep-polished-firefly-ad4uv1q6-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+      # ✅ JWT Configuration
+      JWT_SECRET: bdfa3a7abf8d950b9b8a90fb68d614c0c28c66424f9b0ee0799597890da7b954
+      JWT_EXPIRE_IN: 1d
+      # ✅ Swagger
+      ENABLE_SWAGGER: "true"
+    # ✅ Expose port untuk akses lokal juga
     ports:
-      - '${PORT:-8080}:8080'
+      - "8080:8080"
     # ✅ Mount uploads folder untuk persist files
     volumes:
       - ./uploads:/app/uploads
@@ -30,12 +65,12 @@ services:
     healthcheck:
       test:
         [
-          'CMD',
-          'wget',
-          '--no-verbose',
-          '--tries=1',
-          '--spider',
-          'http://localhost:8080',
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:8080",
         ]
       interval: 30s
       timeout: 10s
@@ -48,3 +83,10 @@ services:
 networks:
   mediator-network:
     driver: bridge
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  tailscale-state:
+    driver: local
