@@ -601,6 +601,7 @@ export class MarketplaceService {
 
   // ============ FEATURED LISTINGS METHODS ============
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async findFeatured(limit: number = 10, category?: string) {
     const now = new Date();
 
