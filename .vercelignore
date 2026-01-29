@@ -1,0 +1,36 @@
+# Dependencies
+
+node_modules
+
+# Source files (we deploy dist)
+
+src
+
+# Tests
+
+test
+_.spec.ts
+_.e2e-spec.ts
+
+# Docker
+
+Dockerfile
+docker-compose.yml
+DOCKER.md
+
+# IDE
+
+.idea
+.vscode
+
+# Git
+
+.git
+.gitignore
+
+# Other
+
+\*.md
+!README.md
+tailscale
+uploads

@@ -4,9 +4,21 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import * as express from 'express';
 
-async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+const expressApp = express();
+let cachedApp: NestExpressApplication;
+
+async function createNestApp(): Promise<NestExpressApplication> {
+  if (cachedApp) {
+    return cachedApp;
+  }
+
+  const app = await NestFactory.create<NestExpressApplication>(
+    AppModule,
+    new ExpressAdapter(expressApp),
+  );
 
   // ✅ Serve static files untuk uploaded images
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
@@ -76,6 +88,20 @@ async function bootstrap() {
     },
   });
 
+  await app.init();
+  cachedApp = app;
+  return app;
+}
+
+// For Vercel Serverless
+export default async function handler(req: any, res: any) {
+  await createNestApp();
+  expressApp(req, res);
+}
+
+// For local development
+async function bootstrap() {
+  const app = await createNestApp();
   await app.listen(process.env.PORT ?? 8080);
   console.log(
     `Application is running on: http://localhost:${process.env.PORT ?? 8080}`,
@@ -87,4 +113,8 @@ async function bootstrap() {
     `Uploaded files available at: http://localhost:${process.env.PORT ?? 8080}/uploads/`,
   );
 }
-bootstrap();
+
+// Only run bootstrap in non-serverless environment
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  bootstrap();
+}
