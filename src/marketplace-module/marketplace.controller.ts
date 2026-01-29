@@ -30,7 +30,7 @@ import { UpdateListingDto } from './dto/update-listing.dto';
 import { FilterListingDto } from './dto/filter-listing.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { multerConfig } from 'src/config/multer.config';
+import { multerS3Config, MulterS3File } from 'src/config/s3.config';
 
 @ApiTags('Marketplace Listings')
 @Controller('api/marketplace')
@@ -40,7 +40,7 @@ export class MarketplaceController {
   @Post('listings')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
+  @UseInterceptors(FilesInterceptor('images', 10, multerS3Config))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Create listing mobil baru dengan upload foto (Seller)',
@@ -104,7 +104,7 @@ export class MarketplaceController {
   async create(
     @Request() req,
     @Body() createListingDto: CreateListingDto,
-    @UploadedFiles() files: Express.Multer.File[],
+    @UploadedFiles() files: MulterS3File[],
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Minimal 1 gambar diperlukan');
@@ -375,7 +375,7 @@ export class MarketplaceController {
   @Put('listings/:id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @UseInterceptors(FilesInterceptor('images', 10, multerConfig))
+  @UseInterceptors(FilesInterceptor('images', 10, multerS3Config))
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Update listing dengan upload foto baru (Owner Only)',
@@ -415,7 +415,7 @@ export class MarketplaceController {
     @Param('id') id: string,
     @Request() req,
     @Body() updateListingDto: UpdateListingDto,
-    @UploadedFiles() files?: Express.Multer.File[],
+    @UploadedFiles() files?: MulterS3File[],
   ) {
     return this.marketplaceService.update(
       id,

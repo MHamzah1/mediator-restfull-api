@@ -12,8 +12,12 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { FilterListingDto } from './dto/filter-listing.dto';
 import { Listing } from 'src/entities/listing.entity';
-import * as fs from 'fs';
-import * as path from 'path';
+import {
+  deleteFromS3,
+  getS3KeyFromUrl,
+  MulterS3File,
+} from 'src/config/s3.config';
+
 @Injectable()
 export class MarketplaceService {
   constructor(
@@ -25,19 +29,18 @@ export class MarketplaceService {
     private userRepository: Repository<User>,
   ) {}
 
-  // Helper untuk menghasilkan URL gambar
-  private generateImageUrls(files: Express.Multer.File[]): string[] {
-    // Hanya simpan filename relatif, tanpa full URL
-    return files.map((file) => `/listings/${file.filename}`);
+  // Helper untuk menghasilkan URL gambar dari S3
+  private generateImageUrls(files: MulterS3File[]): string[] {
+    // Simpan URL lengkap dari S3
+    return files.map((file) => file.location);
   }
 
-  private deleteFiles(filePaths: string[]): void {
-    filePaths.forEach((filePath) => {
-      const fullPath = path.join('./uploads/listings', path.basename(filePath));
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    });
+  private async deleteFiles(filePaths: string[]): Promise<void> {
+    // Hapus file dari S3
+    for (const filePath of filePaths) {
+      const key = getS3KeyFromUrl(filePath);
+      await deleteFromS3(key);
+    }
   }
 
   // Helper untuk menghitung date range berdasarkan periode
@@ -122,7 +125,7 @@ export class MarketplaceService {
   async create(
     userId: string,
     createListingDto: CreateListingDto,
-    files: Express.Multer.File[],
+    files: MulterS3File[],
   ): Promise<{ message: string; data: Listing }> {
     const carModel = await this.carModelRepository.findOne({
       where: { id: createListingDto.carModelId },
@@ -391,7 +394,7 @@ export class MarketplaceService {
     id: string,
     userId: string,
     updateListingDto: UpdateListingDto,
-    files?: Express.Multer.File[],
+    files?: MulterS3File[],
   ): Promise<{ message: string; data: Listing }> {
     const listing = await this.listingRepository.findOne({
       where: { id },
@@ -410,8 +413,8 @@ export class MarketplaceService {
 
     // Jika ada file baru diupload
     if (files && files.length > 0) {
-      // Hapus gambar lama
-      this.deleteFiles(listing.images);
+      // Hapus gambar lama dari S3
+      await this.deleteFiles(listing.images);
 
       // Generate URL gambar baru
       const newImageUrls = this.generateImageUrls(files);
@@ -445,8 +448,8 @@ export class MarketplaceService {
       );
     }
 
-    // Hapus file gambar
-    this.deleteFiles(listing.images);
+    // Hapus file gambar dari S3
+    await this.deleteFiles(listing.images);
 
     await this.listingRepository.delete(id);
 
