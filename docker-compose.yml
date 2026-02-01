@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 # ============================================
 # Production Configuration
@@ -17,7 +17,7 @@ services:
     hostname: mediator-api
     restart: unless-stopped
     environment:
-      - TS_AUTHKEY=tskey-auth-ky1bvkPizJ11CNTRL-swpT9rjmWniuxUeV7p2Eni8HZvoLckpuf
+      - TS_AUTHKEY=tskey-auth-kqkUHJW9kE11CNTRL-YBkSovzjCmCveNGiCySukCVDQZqwbwKtJ
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
       - tailscale-state:/var/lib/tailscale
@@ -28,7 +28,7 @@ services:
     networks:
       - mediator-network
     healthcheck:
-      test: ["CMD", "tailscale", "status"]
+      test: ['CMD', 'tailscale', 'status']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,15 +48,15 @@ services:
       NODE_ENV: production
       PORT: 8080
       # ✅ Database Configuration (Neon.tech)
-      DATABASE_URL: postgresql://neondb_owner:npg_yYXxmMOc7qZ3@ep-polished-firefly-ad4uv1q6-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require
+      DATABASE_URL: postgresql://neondb_owner:npg_qNf1HhP0mEQn@ep-morning-tooth-a4428lv2-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
       # ✅ JWT Configuration
       JWT_SECRET: bdfa3a7abf8d950b9b8a90fb68d614c0c28c66424f9b0ee0799597890da7b954
       JWT_EXPIRE_IN: 1d
       # ✅ Swagger
-      ENABLE_SWAGGER: "true"
+      ENABLE_SWAGGER: 'true'
     # ✅ Expose port untuk akses lokal juga
     ports:
-      - "8080:8080"
+      - '8080:8080'
     # ✅ Mount uploads folder untuk persist files
     volumes:
       - ./uploads:/app/uploads
@@ -65,12 +65,12 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "wget",
-          "--no-verbose",
-          "--tries=1",
-          "--spider",
-          "http://localhost:8080",
+          'CMD',
+          'wget',
+          '--no-verbose',
+          '--tries=1',
+          '--spider',
+          'http://localhost:8080',
         ]
       interval: 30s
       timeout: 10s

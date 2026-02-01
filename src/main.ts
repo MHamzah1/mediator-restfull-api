@@ -102,7 +102,8 @@ export default async function handler(req: any, res: any) {
 // For local development
 async function bootstrap() {
   const app = await createNestApp();
-  await app.listen(process.env.PORT ?? 8080);
+  await app.listen(8080, '0.0.0.0'); // ✅ ini penting
+
   console.log(
     `Application is running on: http://localhost:${process.env.PORT ?? 8080}`,
   );

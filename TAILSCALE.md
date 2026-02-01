@@ -118,4 +118,22 @@ Jika Anda sudah menginstall Tailscale di Windows (desktop-28d9g5g), API sudah bi
 http://100.88.149.124:8080
 ```
 
-Device lain di jaringan Tailscale bisa mengakses API via IP Windows tersebut.
+Rebuild container Anda:
+
+docker compose down
+docker compose up --build -d
+
+Cek dari komputer lain / desktop (IP 100.88.149.124)
+curl http://100.127.130.82:8080
+
+🎁 (Opsional) Aktifkan tailscale serve Agar Bisa HTTPS
+
+Jika Anda ingin mengakses https://mediator-api-3.tailnet-name.ts.net tanpa port, Anda bisa:
+
+docker exec -it mediator-tailscale tailscale serve --bg --http 80 http://api:8080
+
+Kemudian Anda bisa akses:
+
+https://mediator-api-3.your-tailnet.ts.net
+
+(Tentu domain \*.ts.net hanya aktif jika Anda enable DNS dan HTTPS dari admin console Tailscale.)
