@@ -3,36 +3,9 @@ version: '3.8'
 # ============================================
 # Production Configuration
 # Menggunakan Neon.tech (External PostgreSQL)
-# Dengan Tailscale Integration
 # ============================================
 
 services:
-  # ============================================
-  # Tailscale Sidecar Container
-  # Memberikan akses ke API via Tailscale network
-  # ============================================
-  tailscale:
-    image: tailscale/tailscale:latest
-    container_name: mediator-tailscale
-    hostname: mediator-api
-    restart: unless-stopped
-    environment:
-      - TS_AUTHKEY=tskey-auth-kqkUHJW9kE11CNTRL-YBkSovzjCmCveNGiCySukCVDQZqwbwKtJ
-      - TS_STATE_DIR=/var/lib/tailscale
-    volumes:
-      - tailscale-state:/var/lib/tailscale
-      - /dev/net/tun:/dev/net/tun
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    networks:
-      - mediator-network
-    healthcheck:
-      test: ['CMD', 'tailscale', 'status']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # ============================================
   # NestJS API Application
   # ============================================
@@ -83,10 +56,3 @@ services:
 networks:
   mediator-network:
     driver: bridge
-
-# ============================================
-# Volumes
-# ============================================
-volumes:
-  tailscale-state:
-    driver: local
