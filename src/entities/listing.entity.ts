@@ -179,6 +179,32 @@ export class Listing {
   @Column({ default: false })
   isFeatured: boolean;
 
+  // ============ WAREHOUSE INTEGRATION FIELDS ============
+
+  @ApiProperty({
+    description: 'ID kendaraan warehouse (jika listing dari warehouse)',
+    nullable: true,
+  })
+  @Column({ nullable: true })
+  warehouseVehicleId: string;
+
+  @ApiProperty({
+    description: 'ID showroom (jika listing dari warehouse)',
+    nullable: true,
+  })
+  @Column({ nullable: true })
+  showroomId: string;
+
+  @ApiProperty({
+    example: 'direct',
+    description: 'Sumber listing: direct (manual) atau warehouse',
+    enum: ['direct', 'warehouse'],
+  })
+  @Column({ default: 'direct' })
+  source: 'direct' | 'warehouse';
+
+  // ============ END WAREHOUSE INTEGRATION FIELDS ============
+
   @ApiProperty({
     example: '2026-01-17T00:00:00Z',
     description: 'Tanggal berakhirnya status featured',

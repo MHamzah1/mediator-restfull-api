@@ -61,10 +61,25 @@ export class User {
   @ApiProperty({
     example: 'customer',
     description: 'Role user',
-    enum: ['customer', 'admin', 'salesman'],
+    enum: [
+      'customer',
+      'admin',
+      'salesman',
+      'showroom_owner',
+      'warehouse_admin',
+      'inspector',
+      'mechanic',
+    ],
   })
   @Column()
-  role: 'customer' | 'admin' | 'salesman';
+  role:
+    | 'customer'
+    | 'admin'
+    | 'salesman'
+    | 'showroom_owner'
+    | 'warehouse_admin'
+    | 'inspector'
+    | 'mechanic';
 
   @ApiProperty({
     example: '2025-01-15T10:30:00Z',

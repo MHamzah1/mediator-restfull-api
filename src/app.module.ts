@@ -22,6 +22,9 @@ import { CalculationHistoryModule } from './CalculationHistory/calculation-histo
 // Boost/Featured Listings Module
 import { BoostModule } from './Boost/boost.module';
 
+// Warehouse & Showroom Module
+import { WarehouseModule } from './Warehouse/warehouse.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -49,6 +52,8 @@ import { BoostModule } from './Boost/boost.module';
     CalculationHistoryModule,
     // Boost/Featured Module
     BoostModule,
+    // Warehouse & Showroom Module
+    WarehouseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

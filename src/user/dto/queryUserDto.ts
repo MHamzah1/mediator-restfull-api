@@ -65,11 +65,11 @@ export class QueryUserDto {
   @ApiPropertyOptional({
     description: 'Filter berdasarkan role',
     example: 'customer',
-    enum: ['customer', 'admin', 'salesman'],
+    enum: ['customer', 'admin', 'salesman', 'showroom_owner', 'warehouse_admin', 'inspector', 'mechanic'],
   })
   @IsOptional()
-  @IsEnum(['customer', 'admin', 'salesman'])
-  role?: 'customer' | 'admin' | 'salesman';
+  @IsEnum(['customer', 'admin', 'salesman', 'showroom_owner', 'warehouse_admin', 'inspector', 'mechanic'])
+  role?: 'customer' | 'admin' | 'salesman' | 'showroom_owner' | 'warehouse_admin' | 'inspector' | 'mechanic';
 
   @ApiPropertyOptional({
     description: 'Tanggal mulai pencarian (format: YYYY-MM-DD)',

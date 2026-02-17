@@ -54,8 +54,10 @@ async function createNestApp(): Promise<NestExpressApplication> {
   // ✅ Setup Swagger
   const config = new DocumentBuilder()
     .setTitle('Mediator RESTful API')
-    .setDescription('API Kalkulator Harga Mobil Bekas - Versi 2.1')
-    .setVersion('2.1')
+    .setDescription(
+      'API Kalkulator Harga Mobil Bekas + Warehouse & Showroom Module - Versi 3.0',
+    )
+    .setVersion('3.0')
     .addBearerAuth(
       {
         type: 'http',
@@ -79,6 +81,15 @@ async function createNestApp(): Promise<NestExpressApplication> {
     .addTag('Specifications', 'Specification management')
     .addTag('Custom Prices', 'Custom Price management')
     .addTag('Marketplace Listings', 'Marketplace listings with image upload')
+    // Warehouse & Showroom Module Tags
+    .addTag('Warehouse - Showrooms', 'Manajemen showroom')
+    .addTag('Warehouse - Vehicles', 'Registrasi & manajemen kendaraan warehouse')
+    .addTag('Warehouse - Inspections', 'Inspeksi kendaraan masuk')
+    .addTag('Warehouse - Zones', 'Zona gudang (GD-A/B/C/D/SRM)')
+    .addTag('Warehouse - Repairs', 'Work order perbaikan kendaraan')
+    .addTag('Warehouse - Admin Payments', 'Pembayaran biaya admin Rp 2.000.000')
+    .addTag('Warehouse - Purchases', 'Transaksi pembelian kendaraan')
+    .addTag('Warehouse - Stock Logs', 'Riwayat stok & audit trail')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
