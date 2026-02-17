@@ -9,13 +9,26 @@ import { Repository } from 'typeorm';
 
 // Entities
 import { Showroom } from '../entities/showroom.entity';
-import { WarehouseVehicle, VehicleStatus } from '../entities/warehouse-vehicle.entity';
-import { VehicleInspection, InspectionResult } from '../entities/vehicle-inspection.entity';
+import {
+  WarehouseVehicle,
+  VehicleStatus,
+} from '../entities/warehouse-vehicle.entity';
+import {
+  VehicleInspection,
+  InspectionResult,
+} from '../entities/vehicle-inspection.entity';
 import { WarehouseZone } from '../entities/warehouse-zone.entity';
-import { VehiclePlacement, PlacementAction } from '../entities/vehicle-placement.entity';
+import {
+  VehiclePlacement,
+  PlacementAction,
+} from '../entities/vehicle-placement.entity';
 import { RepairOrder, RepairStatus } from '../entities/repair-order.entity';
 import { AdminPayment } from '../entities/admin-payment.entity';
-import { PurchaseTransaction, PurchasePaymentStatus, PurchaseStatus } from '../entities/purchase-transaction.entity';
+import {
+  PurchaseTransaction,
+  PurchasePaymentStatus,
+  PurchaseStatus,
+} from '../entities/purchase-transaction.entity';
 import { StockLog, StockAction } from '../entities/stock-log.entity';
 import { Listing } from '../entities/listing.entity';
 import { PaymentStatus } from '../entities/boost-transaction.entity';
@@ -36,13 +49,19 @@ import {
 export class WarehouseService {
   constructor(
     @InjectRepository(Showroom) private showroomRepo: Repository<Showroom>,
-    @InjectRepository(WarehouseVehicle) private vehicleRepo: Repository<WarehouseVehicle>,
-    @InjectRepository(VehicleInspection) private inspectionRepo: Repository<VehicleInspection>,
-    @InjectRepository(WarehouseZone) private zoneRepo: Repository<WarehouseZone>,
-    @InjectRepository(VehiclePlacement) private placementRepo: Repository<VehiclePlacement>,
+    @InjectRepository(WarehouseVehicle)
+    private vehicleRepo: Repository<WarehouseVehicle>,
+    @InjectRepository(VehicleInspection)
+    private inspectionRepo: Repository<VehicleInspection>,
+    @InjectRepository(WarehouseZone)
+    private zoneRepo: Repository<WarehouseZone>,
+    @InjectRepository(VehiclePlacement)
+    private placementRepo: Repository<VehiclePlacement>,
     @InjectRepository(RepairOrder) private repairRepo: Repository<RepairOrder>,
-    @InjectRepository(AdminPayment) private adminPaymentRepo: Repository<AdminPayment>,
-    @InjectRepository(PurchaseTransaction) private purchaseRepo: Repository<PurchaseTransaction>,
+    @InjectRepository(AdminPayment)
+    private adminPaymentRepo: Repository<AdminPayment>,
+    @InjectRepository(PurchaseTransaction)
+    private purchaseRepo: Repository<PurchaseTransaction>,
     @InjectRepository(StockLog) private stockLogRepo: Repository<StockLog>,
     @InjectRepository(Listing) private listingRepo: Repository<Listing>,
   ) {}
@@ -51,8 +70,11 @@ export class WarehouseService {
   // SHOWROOM CRUD
   // ============================================================
   async createShowroom(userId: string, dto: CreateShowroomDto) {
-    const existing = await this.showroomRepo.findOne({ where: { code: dto.code } });
-    if (existing) throw new BadRequestException('Kode showroom sudah digunakan');
+    const existing = await this.showroomRepo.findOne({
+      where: { code: dto.code },
+    });
+    if (existing)
+      throw new BadRequestException('Kode showroom sudah digunakan');
 
     const showroom = this.showroomRepo.create({ ...dto, ownerId: userId });
     const saved = await this.showroomRepo.save(showroom);
@@ -60,7 +82,10 @@ export class WarehouseService {
   }
 
   async findAllShowrooms(userId: string) {
-    const data = await this.showroomRepo.find({ where: { ownerId: userId }, order: { createdAt: 'DESC' } });
+    const data = await this.showroomRepo.find({
+      where: { ownerId: userId },
+      order: { createdAt: 'DESC' },
+    });
     return { message: 'Berhasil mengambil data showroom', data };
   }
 
@@ -71,13 +96,19 @@ export class WarehouseService {
   }
 
   async getShowroomDashboard(showroomId: string) {
-    const showroom = await this.showroomRepo.findOne({ where: { id: showroomId } });
+    const showroom = await this.showroomRepo.findOne({
+      where: { id: showroomId },
+    });
     if (!showroom) throw new NotFoundException('Showroom tidak ditemukan');
 
-    const totalVehicles = await this.vehicleRepo.count({ where: { showroomId } });
+    const totalVehicles = await this.vehicleRepo.count({
+      where: { showroomId },
+    });
     const byStatus = {};
     for (const s of Object.values(VehicleStatus)) {
-      byStatus[s] = await this.vehicleRepo.count({ where: { showroomId, status: s } });
+      byStatus[s] = await this.vehicleRepo.count({
+        where: { showroomId, status: s },
+      });
     }
     const zones = await this.zoneRepo.find({ where: { showroomId } });
 
@@ -87,15 +118,45 @@ export class WarehouseService {
     };
   }
 
+  async updateShowroom(
+    id: string,
+    userId: string,
+    dto: Partial<CreateShowroomDto>,
+  ) {
+    const showroom = await this.showroomRepo.findOne({ where: { id } });
+    if (!showroom) throw new NotFoundException('Showroom tidak ditemukan');
+    if (showroom.ownerId !== userId)
+      throw new ForbiddenException('Hanya pemilik yang bisa update');
+
+    Object.assign(showroom, dto);
+    const saved = await this.showroomRepo.save(showroom);
+    return { message: 'Showroom berhasil diupdate', data: saved };
+  }
+
+  async deleteShowroom(id: string, userId: string) {
+    const showroom = await this.showroomRepo.findOne({ where: { id } });
+    if (!showroom) throw new NotFoundException('Showroom tidak ditemukan');
+    if (showroom.ownerId !== userId)
+      throw new ForbiddenException('Hanya pemilik yang bisa hapus');
+
+    showroom.isActive = false;
+    await this.showroomRepo.save(showroom);
+    return { message: 'Showroom berhasil dinonaktifkan (soft delete)' };
+  }
+
   // ============================================================
   // TAHAP 1 & 2: REGISTER VEHICLE + INSPECTION
   // ============================================================
   async registerVehicle(userId: string, dto: CreateWarehouseVehicleDto) {
-    const showroom = await this.showroomRepo.findOne({ where: { id: dto.showroomId } });
+    const showroom = await this.showroomRepo.findOne({
+      where: { id: dto.showroomId },
+    });
     if (!showroom) throw new NotFoundException('Showroom tidak ditemukan');
 
     // Generate barcode
-    const count = await this.vehicleRepo.count({ where: { showroomId: dto.showroomId } });
+    const count = await this.vehicleRepo.count({
+      where: { showroomId: dto.showroomId },
+    });
     const seq = String(count + 1).padStart(5, '0');
     const barcode = `${showroom.code}-${new Date().getFullYear()}-${seq}`;
 
@@ -111,8 +172,16 @@ export class WarehouseService {
   }
 
   async findAllVehicles(query: QueryWarehouseDto) {
-    const { page = 1, perPage = 20, search, showroomId, status, sortDirection = 'DESC' } = query;
-    const qb = this.vehicleRepo.createQueryBuilder('v')
+    const {
+      page = 1,
+      perPage = 20,
+      search,
+      showroomId,
+      status,
+      sortDirection = 'DESC',
+    } = query;
+    const qb = this.vehicleRepo
+      .createQueryBuilder('v')
       .leftJoinAndSelect('v.showroom', 'showroom')
       .leftJoinAndSelect('v.carModel', 'carModel');
 
@@ -133,7 +202,12 @@ export class WarehouseService {
     return {
       message: 'Berhasil mengambil data kendaraan',
       data,
-      pagination: { page, pageSize: perPage, totalRecords: total, totalPages: Math.ceil(total / perPage) },
+      pagination: {
+        page,
+        pageSize: perPage,
+        totalRecords: total,
+        totalPages: Math.ceil(total / perPage),
+      },
     };
   }
 
@@ -144,20 +218,42 @@ export class WarehouseService {
     });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
 
-    const inspections = await this.inspectionRepo.find({ where: { warehouseVehicleId: id }, order: { createdAt: 'DESC' } });
-    const currentPlacement = await this.placementRepo.findOne({ where: { warehouseVehicleId: id, isCurrent: true }, relations: ['zone'] });
-    const repairs = await this.repairRepo.find({ where: { warehouseVehicleId: id }, order: { createdAt: 'DESC' } });
+    const inspections = await this.inspectionRepo.find({
+      where: { warehouseVehicleId: id },
+      order: { createdAt: 'DESC' },
+    });
+    const currentPlacement = await this.placementRepo.findOne({
+      where: { warehouseVehicleId: id, isCurrent: true },
+      relations: ['zone'],
+    });
+    const repairs = await this.repairRepo.find({
+      where: { warehouseVehicleId: id },
+      order: { createdAt: 'DESC' },
+    });
 
-    return { message: 'Detail kendaraan', data: { ...vehicle, inspections, currentPlacement, repairs } };
+    return {
+      message: 'Detail kendaraan',
+      data: { ...vehicle, inspections, currentPlacement, repairs },
+    };
   }
 
   async findVehicleByBarcode(barcode: string) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { barcode }, relations: ['showroom'] });
-    if (!vehicle) throw new NotFoundException('Kendaraan dengan barcode tersebut tidak ditemukan');
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { barcode },
+      relations: ['showroom'],
+    });
+    if (!vehicle)
+      throw new NotFoundException(
+        'Kendaraan dengan barcode tersebut tidak ditemukan',
+      );
     return { message: 'Kendaraan ditemukan', data: vehicle };
   }
 
-  async updateVehicleStatus(id: string, newStatus: VehicleStatus, userId: string) {
+  async updateVehicleStatus(
+    id: string,
+    newStatus: VehicleStatus,
+    userId: string,
+  ) {
     const vehicle = await this.vehicleRepo.findOne({ where: { id } });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
 
@@ -166,24 +262,31 @@ export class WarehouseService {
     await this.vehicleRepo.save(vehicle);
 
     // Create stock log
-    await this.stockLogRepo.save(this.stockLogRepo.create({
-      showroomId: vehicle.showroomId,
-      warehouseVehicleId: id,
-      action: StockAction.STATUS_CHANGE,
-      previousStatus: prevStatus,
-      newStatus: newStatus,
-      performedById: userId,
-      notes: `Status diubah dari ${prevStatus} ke ${newStatus}`,
-    }));
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: id,
+        action: StockAction.STATUS_CHANGE,
+        previousStatus: prevStatus,
+        newStatus: newStatus,
+        performedById: userId,
+        notes: `Status diubah dari ${prevStatus} ke ${newStatus}`,
+      }),
+    );
 
-    return { message: `Status kendaraan diubah ke ${newStatus}`, data: vehicle };
+    return {
+      message: `Status kendaraan diubah ke ${newStatus}`,
+      data: vehicle,
+    };
   }
 
   // ============================================================
   // INSPEKSI
   // ============================================================
   async createInspection(inspectorId: string, dto: CreateInspectionDto) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id: dto.warehouseVehicleId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: dto.warehouseVehicleId },
+    });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
 
     const inspection = this.inspectionRepo.create({ ...dto, inspectorId });
@@ -211,6 +314,40 @@ export class WarehouseService {
     return { message: 'Riwayat inspeksi', data };
   }
 
+  async getOneInspection(id: string) {
+    const data = await this.inspectionRepo.findOne({
+      where: { id },
+      relations: ['inspector', 'warehouseVehicle'],
+    });
+    if (!data) throw new NotFoundException('Inspeksi tidak ditemukan');
+    return { message: 'Detail inspeksi', data };
+  }
+
+  async updateInspection(id: string, dto: Partial<CreateInspectionDto>) {
+    const inspection = await this.inspectionRepo.findOne({ where: { id } });
+    if (!inspection) throw new NotFoundException('Inspeksi tidak ditemukan');
+
+    Object.assign(inspection, dto);
+    const saved = await this.inspectionRepo.save(inspection);
+
+    // Update vehicle status if result changed
+    if (dto.overallResult) {
+      const vehicle = await this.vehicleRepo.findOne({
+        where: { id: inspection.warehouseVehicleId },
+      });
+      if (vehicle) {
+        if (dto.overallResult === InspectionResult.REJECTED) {
+          vehicle.status = VehicleStatus.REJECTED;
+        } else {
+          vehicle.status = VehicleStatus.REGISTERED;
+        }
+        await this.vehicleRepo.save(vehicle);
+      }
+    }
+
+    return { message: 'Inspeksi berhasil diupdate', data: saved };
+  }
+
   // ============================================================
   // WAREHOUSE ZONES
   // ============================================================
@@ -221,25 +358,66 @@ export class WarehouseService {
   }
 
   async findZonesByShowroom(showroomId: string) {
-    const data = await this.zoneRepo.find({ where: { showroomId }, order: { code: 'ASC' } });
+    const data = await this.zoneRepo.find({
+      where: { showroomId },
+      order: { code: 'ASC' },
+    });
     return { message: 'Daftar zona gudang', data };
+  }
+
+  async getVehiclesByZone(zoneId: string) {
+    const placements = await this.placementRepo.find({
+      where: { zoneId, isCurrent: true },
+      relations: ['warehouseVehicle'],
+      order: { placedAt: 'DESC' },
+    });
+    const vehicles = placements.map((p) => ({
+      ...p.warehouseVehicle,
+      placedAt: p.placedAt,
+      placementId: p.id,
+    }));
+    return {
+      message: 'Kendaraan di zona ini',
+      data: vehicles,
+      total: vehicles.length,
+    };
+  }
+
+  async updateZoneCapacity(zoneId: string, capacity: number) {
+    const zone = await this.zoneRepo.findOne({ where: { id: zoneId } });
+    if (!zone) throw new NotFoundException('Zona tidak ditemukan');
+    if (capacity < zone.currentCount) {
+      throw new BadRequestException(
+        `Kapasitas tidak bisa kurang dari jumlah kendaraan saat ini (${zone.currentCount})`,
+      );
+    }
+    zone.capacity = capacity;
+    const saved = await this.zoneRepo.save(zone);
+    return { message: 'Kapasitas zona berhasil diupdate', data: saved };
   }
 
   // ============================================================
   // TAHAP 3: PENEMPATAN KENDARAAN DI ZONA
   // ============================================================
   async placeVehicle(vehicleId: string, dto: PlaceVehicleDto, userId: string) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id: vehicleId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+    });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
 
     const zone = await this.zoneRepo.findOne({ where: { id: dto.zoneId } });
     if (!zone) throw new NotFoundException('Zona tidak ditemukan');
-    if (zone.currentCount >= zone.capacity) throw new BadRequestException('Zona sudah penuh');
+    if (zone.currentCount >= zone.capacity)
+      throw new BadRequestException('Zona sudah penuh');
 
     // Deactivate old placement
     await this.placementRepo.update(
       { warehouseVehicleId: vehicleId, isCurrent: true },
-      { isCurrent: false, removedAt: new Date(), action: PlacementAction.MOVED },
+      {
+        isCurrent: false,
+        removedAt: new Date(),
+        action: PlacementAction.MOVED,
+      },
     );
 
     // Also decrement old zone
@@ -248,7 +426,11 @@ export class WarehouseService {
       order: { createdAt: 'DESC' },
     });
     if (oldPlacement && oldPlacement.zoneId !== dto.zoneId) {
-      await this.zoneRepo.decrement({ id: oldPlacement.zoneId }, 'currentCount', 1);
+      await this.zoneRepo.decrement(
+        { id: oldPlacement.zoneId },
+        'currentCount',
+        1,
+      );
     }
 
     // Create new placement
@@ -263,29 +445,39 @@ export class WarehouseService {
     await this.zoneRepo.increment({ id: dto.zoneId }, 'currentCount', 1);
 
     // Update vehicle status
-    if (vehicle.status === VehicleStatus.REGISTERED || vehicle.status === VehicleStatus.PENDING_PAYMENT) {
+    if (
+      vehicle.status === VehicleStatus.REGISTERED ||
+      vehicle.status === VehicleStatus.PENDING_PAYMENT
+    ) {
       vehicle.status = VehicleStatus.IN_WAREHOUSE;
       await this.vehicleRepo.save(vehicle);
     }
 
     // Stock log
-    await this.stockLogRepo.save(this.stockLogRepo.create({
-      showroomId: vehicle.showroomId,
-      warehouseVehicleId: vehicleId,
-      action: StockAction.VEHICLE_IN,
-      newStatus: vehicle.status,
-      performedById: userId,
-      notes: `Ditempatkan di zona ${zone.code} - ${zone.name}`,
-    }));
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: vehicleId,
+        action: StockAction.VEHICLE_IN,
+        newStatus: vehicle.status,
+        performedById: userId,
+        notes: `Ditempatkan di zona ${zone.code} - ${zone.name}`,
+      }),
+    );
 
-    return { message: `Kendaraan ditempatkan di zona ${zone.code}`, data: placement };
+    return {
+      message: `Kendaraan ditempatkan di zona ${zone.code}`,
+      data: placement,
+    };
   }
 
   // ============================================================
   // REPAIR ORDERS
   // ============================================================
   async createRepairOrder(userId: string, dto: CreateRepairDto) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id: dto.warehouseVehicleId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: dto.warehouseVehicleId },
+    });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
 
     const repair = this.repairRepo.create(dto);
@@ -297,7 +489,11 @@ export class WarehouseService {
     return { message: 'Work order perbaikan berhasil dibuat', data: saved };
   }
 
-  async updateRepairStatus(repairId: string, status: RepairStatus, actualCost?: number) {
+  async updateRepairStatus(
+    repairId: string,
+    status: RepairStatus,
+    actualCost?: number,
+  ) {
     const repair = await this.repairRepo.findOne({ where: { id: repairId } });
     if (!repair) throw new NotFoundException('Repair order tidak ditemukan');
 
@@ -308,7 +504,9 @@ export class WarehouseService {
       if (actualCost) repair.actualCost = actualCost;
 
       // Move vehicle to ready status
-      const vehicle = await this.vehicleRepo.findOne({ where: { id: repair.warehouseVehicleId } });
+      const vehicle = await this.vehicleRepo.findOne({
+        where: { id: repair.warehouseVehicleId },
+      });
       if (vehicle) {
         vehicle.status = VehicleStatus.READY;
         await this.vehicleRepo.save(vehicle);
@@ -332,7 +530,9 @@ export class WarehouseService {
   // ADMIN PAYMENT (Biaya Admin Rp 2.000.000)
   // ============================================================
   async createAdminPayment(vehicleId: string, payerId: string) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id: vehicleId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+    });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
 
     // Generate invoice number
@@ -364,8 +564,14 @@ export class WarehouseService {
     };
   }
 
-  async handleAdminPaymentWebhook(invoiceNumber: string, status: string, paymentMethod?: string) {
-    const payment = await this.adminPaymentRepo.findOne({ where: { invoiceNumber } });
+  async handleAdminPaymentWebhook(
+    invoiceNumber: string,
+    status: string,
+    paymentMethod?: string,
+  ) {
+    const payment = await this.adminPaymentRepo.findOne({
+      where: { invoiceNumber },
+    });
     if (!payment) throw new NotFoundException('Payment tidak ditemukan');
 
     if (status === 'paid') {
@@ -375,17 +581,25 @@ export class WarehouseService {
       await this.adminPaymentRepo.save(payment);
 
       // Update vehicle status
-      const vehicle = await this.vehicleRepo.findOne({ where: { id: payment.warehouseVehicleId } });
+      const vehicle = await this.vehicleRepo.findOne({
+        where: { id: payment.warehouseVehicleId },
+      });
       if (vehicle) {
         vehicle.status = VehicleStatus.REGISTERED;
         await this.vehicleRepo.save(vehicle);
       }
 
-      return { message: 'Pembayaran admin berhasil dikonfirmasi', data: payment };
+      return {
+        message: 'Pembayaran admin berhasil dikonfirmasi',
+        data: payment,
+      };
     } else {
       payment.paymentStatus = status as any;
       await this.adminPaymentRepo.save(payment);
-      return { message: `Status pembayaran diubah ke ${status}`, data: payment };
+      return {
+        message: `Status pembayaran diubah ke ${status}`,
+        data: payment,
+      };
     }
   }
 
@@ -408,7 +622,9 @@ export class WarehouseService {
     });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
     if (vehicle.status !== VehicleStatus.READY) {
-      throw new BadRequestException(`Kendaraan belum ready (status saat ini: ${vehicle.status})`);
+      throw new BadRequestException(
+        `Kendaraan belum ready (status saat ini: ${vehicle.status})`,
+      );
     }
 
     // Create Listing from warehouse vehicle data
@@ -423,7 +639,8 @@ export class WarehouseService {
       color: vehicle.color,
       locationCity: vehicle.showroom?.city || '',
       locationProvince: vehicle.showroom?.province || '',
-      description: `${vehicle.brandName} ${vehicle.modelName} ${vehicle.year} - ${vehicle.color}. ${vehicle.notes || ''}`.trim(),
+      description:
+        `${vehicle.brandName} ${vehicle.modelName} ${vehicle.year} - ${vehicle.color}. ${vehicle.notes || ''}`.trim(),
       condition: 'bekas',
       images: vehicle.images || [],
       sellerWhatsapp: vehicle.showroom?.whatsapp || vehicle.sellerPhone,
@@ -439,15 +656,17 @@ export class WarehouseService {
     await this.vehicleRepo.save(vehicle);
 
     // Stock log
-    await this.stockLogRepo.save(this.stockLogRepo.create({
-      showroomId: vehicle.showroomId,
-      warehouseVehicleId: vehicleId,
-      action: StockAction.STATUS_CHANGE,
-      previousStatus: VehicleStatus.READY,
-      newStatus: VehicleStatus.LISTED,
-      performedById: userId,
-      notes: `Dipublikasi ke marketplace, Listing ID: ${savedListing.id}`,
-    }));
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: vehicleId,
+        action: StockAction.STATUS_CHANGE,
+        previousStatus: VehicleStatus.READY,
+        newStatus: VehicleStatus.LISTED,
+        performedById: userId,
+        notes: `Dipublikasi ke marketplace, Listing ID: ${savedListing.id}`,
+      }),
+    );
 
     return {
       message: 'Kendaraan berhasil dipublikasi ke marketplace',
@@ -459,9 +678,14 @@ export class WarehouseService {
   // TAHAP 5: PURCHASE TRANSACTION
   // ============================================================
   async createPurchase(buyerId: string, dto: CreatePurchaseDto) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id: dto.warehouseVehicleId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: dto.warehouseVehicleId },
+    });
     if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
-    if (vehicle.status !== VehicleStatus.LISTED && vehicle.status !== VehicleStatus.READY) {
+    if (
+      vehicle.status !== VehicleStatus.LISTED &&
+      vehicle.status !== VehicleStatus.READY
+    ) {
       throw new BadRequestException('Kendaraan tidak tersedia untuk dibeli');
     }
 
@@ -485,8 +709,42 @@ export class WarehouseService {
     };
   }
 
-  async handlePurchaseWebhook(invoiceNumber: string, status: string, paymentMethod?: string) {
-    const purchase = await this.purchaseRepo.findOne({ where: { invoiceNumber } });
+  async getOnePurchase(id: string) {
+    const data = await this.purchaseRepo.findOne({
+      where: { id },
+      relations: ['warehouseVehicle', 'buyer', 'listing'],
+    });
+    if (!data) throw new NotFoundException('Transaksi tidak ditemukan');
+    return { message: 'Detail transaksi pembelian', data };
+  }
+
+  async confirmPurchasePayment(id: string, userId: string) {
+    const purchase = await this.purchaseRepo.findOne({ where: { id } });
+    if (!purchase) throw new NotFoundException('Transaksi tidak ditemukan');
+
+    purchase.paymentStatus = PurchasePaymentStatus.FULLY_PAID;
+    purchase.status = PurchaseStatus.COMPLETED;
+    purchase.paidAt = new Date();
+    purchase.completedAt = new Date();
+    await this.purchaseRepo.save(purchase);
+
+    // Trigger sale completion
+    await this.completeVehicleSale(purchase.warehouseVehicleId, userId);
+
+    return {
+      message: 'Pembayaran dikonfirmasi manual, kendaraan SOLD',
+      data: purchase,
+    };
+  }
+
+  async handlePurchaseWebhook(
+    invoiceNumber: string,
+    status: string,
+    paymentMethod?: string,
+  ) {
+    const purchase = await this.purchaseRepo.findOne({
+      where: { invoiceNumber },
+    });
     if (!purchase) throw new NotFoundException('Transaksi tidak ditemukan');
 
     if (status === 'fully_paid' || status === 'paid') {
@@ -498,9 +756,15 @@ export class WarehouseService {
       await this.purchaseRepo.save(purchase);
 
       // ===== TAHAP 6: AUTO STOCK REDUCTION =====
-      await this.completeVehicleSale(purchase.warehouseVehicleId, purchase.buyerId);
+      await this.completeVehicleSale(
+        purchase.warehouseVehicleId,
+        purchase.buyerId,
+      );
 
-      return { message: 'Pembayaran berhasil & kendaraan SOLD', data: purchase };
+      return {
+        message: 'Pembayaran berhasil & kendaraan SOLD',
+        data: purchase,
+      };
     } else if (status === 'dp_paid') {
       purchase.paymentStatus = PurchasePaymentStatus.DP_PAID;
       purchase.status = PurchaseStatus.CONFIRMED;
@@ -515,9 +779,13 @@ export class WarehouseService {
   }
 
   async getPurchasesByShowroom(showroomId: string) {
-    const vehicles = await this.vehicleRepo.find({ where: { showroomId }, select: ['id'] });
+    const vehicles = await this.vehicleRepo.find({
+      where: { showroomId },
+      select: ['id'],
+    });
     const vehicleIds = vehicles.map((v) => v.id);
-    if (vehicleIds.length === 0) return { message: 'Tidak ada transaksi', data: [] };
+    if (vehicleIds.length === 0)
+      return { message: 'Tidak ada transaksi', data: [] };
 
     const data = await this.purchaseRepo
       .createQueryBuilder('p')
@@ -534,7 +802,9 @@ export class WarehouseService {
   // TAHAP 6: COMPLETE SALE & STOCK REDUCTION
   // ============================================================
   private async completeVehicleSale(vehicleId: string, performedById: string) {
-    const vehicle = await this.vehicleRepo.findOne({ where: { id: vehicleId } });
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+    });
     if (!vehicle) return;
 
     const prevStatus = vehicle.status;
@@ -559,19 +829,25 @@ export class WarehouseService {
       await this.placementRepo.save(currentPlacement);
 
       // Decrement zone count
-      await this.zoneRepo.decrement({ id: currentPlacement.zoneId }, 'currentCount', 1);
+      await this.zoneRepo.decrement(
+        { id: currentPlacement.zoneId },
+        'currentCount',
+        1,
+      );
     }
 
     // 4. Create stock log: vehicle_out
-    await this.stockLogRepo.save(this.stockLogRepo.create({
-      showroomId: vehicle.showroomId,
-      warehouseVehicleId: vehicleId,
-      action: StockAction.VEHICLE_OUT,
-      previousStatus: prevStatus,
-      newStatus: VehicleStatus.SOLD,
-      performedById,
-      notes: 'Kendaraan terjual - stok otomatis berkurang',
-    }));
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: vehicleId,
+        action: StockAction.VEHICLE_OUT,
+        previousStatus: prevStatus,
+        newStatus: VehicleStatus.SOLD,
+        performedById,
+        notes: 'Kendaraan terjual - stok otomatis berkurang',
+      }),
+    );
   }
 
   // ============================================================
@@ -588,7 +864,12 @@ export class WarehouseService {
     return {
       message: 'Stock logs',
       data,
-      pagination: { page, pageSize: perPage, totalRecords: total, totalPages: Math.ceil(total / perPage) },
+      pagination: {
+        page,
+        pageSize: perPage,
+        totalRecords: total,
+        totalPages: Math.ceil(total / perPage),
+      },
     };
   }
 
@@ -596,7 +877,9 @@ export class WarehouseService {
     const total = await this.vehicleRepo.count({ where: { showroomId } });
     const summary = {};
     for (const s of Object.values(VehicleStatus)) {
-      summary[s] = await this.vehicleRepo.count({ where: { showroomId, status: s } });
+      summary[s] = await this.vehicleRepo.count({
+        where: { showroomId, status: s },
+      });
     }
 
     // Count this month's in/out
@@ -617,7 +900,11 @@ export class WarehouseService {
 
     return {
       message: 'Stock summary',
-      data: { totalVehicles: total, byStatus: summary, thisMonth: { vehicleIn, vehicleOut } },
+      data: {
+        totalVehicles: total,
+        byStatus: summary,
+        thisMonth: { vehicleIn, vehicleOut },
+      },
     };
   }
 }

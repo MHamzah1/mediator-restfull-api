@@ -3,5 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class PlaceVehicleDto {
   @ApiProperty({ description: 'Zone ID untuk penempatan' })
-  @IsNotEmpty() @IsString() zoneId: string;
+  @IsNotEmpty()
+  @IsString()
+  zoneId: string;
 }

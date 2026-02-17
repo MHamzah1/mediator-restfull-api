@@ -83,7 +83,10 @@ async function createNestApp(): Promise<NestExpressApplication> {
     .addTag('Marketplace Listings', 'Marketplace listings with image upload')
     // Warehouse & Showroom Module Tags
     .addTag('Warehouse - Showrooms', 'Manajemen showroom')
-    .addTag('Warehouse - Vehicles', 'Registrasi & manajemen kendaraan warehouse')
+    .addTag(
+      'Warehouse - Vehicles',
+      'Registrasi & manajemen kendaraan warehouse',
+    )
     .addTag('Warehouse - Inspections', 'Inspeksi kendaraan masuk')
     .addTag('Warehouse - Zones', 'Zona gudang (GD-A/B/C/D/SRM)')
     .addTag('Warehouse - Repairs', 'Work order perbaikan kendaraan')

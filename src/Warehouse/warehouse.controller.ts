@@ -1,15 +1,36 @@
 import {
-  Controller, Get, Post, Put, Patch, Delete, Body, Param, Query,
-  UseGuards, Request, HttpCode, HttpStatus,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  Request,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import {
-  ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiQuery,
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { WarehouseService } from './warehouse.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 import {
-  CreateShowroomDto, CreateWarehouseVehicleDto, CreateInspectionDto,
-  CreateZoneDto, PlaceVehicleDto, CreateRepairDto, CreatePurchaseDto,
+  CreateShowroomDto,
+  CreateWarehouseVehicleDto,
+  CreateInspectionDto,
+  CreateZoneDto,
+  PlaceVehicleDto,
+  CreateRepairDto,
+  CreatePurchaseDto,
   QueryWarehouseDto,
 } from './dto';
 import { VehicleStatus } from '../entities/warehouse-vehicle.entity';
@@ -54,6 +75,26 @@ export class ShowroomController {
   async dashboard(@Param('id') id: string) {
     return this.svc.getShowroomDashboard(id);
   }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update data showroom' })
+  async update(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() dto: CreateShowroomDto,
+  ) {
+    return this.svc.updateShowroom(id, req.user.userId, dto);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Soft delete showroom (set isActive = false)' })
+  async remove(@Param('id') id: string, @Request() req) {
+    return this.svc.deleteShowroom(id, req.user.userId);
+  }
 }
 
 // ============================================================
@@ -75,7 +116,9 @@ export class VehicleController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'List semua kendaraan di warehouse (filter, pagination)' })
+  @ApiOperation({
+    summary: 'List semua kendaraan di warehouse (filter, pagination)',
+  })
   async findAll(@Query() query: QueryWarehouseDto) {
     return this.svc.findAllVehicles(query);
   }
@@ -92,7 +135,9 @@ export class VehicleController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Detail kendaraan (+ inspeksi, placement, repairs)' })
+  @ApiOperation({
+    summary: 'Detail kendaraan (+ inspeksi, placement, repairs)',
+  })
   async findOne(@Param('id') id: string) {
     return this.svc.findOneVehicle(id);
   }
@@ -114,14 +159,20 @@ export class VehicleController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Tempatkan kendaraan di zona gudang (Tahap 3)' })
-  async place(@Param('id') id: string, @Body() dto: PlaceVehicleDto, @Request() req) {
+  async place(
+    @Param('id') id: string,
+    @Body() dto: PlaceVehicleDto,
+    @Request() req,
+  ) {
     return this.svc.placeVehicle(id, dto, req.user.userId);
   }
 
   @Post(':id/publish')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Publish kendaraan ke marketplace (Tahap 4 - tombol READY)' })
+  @ApiOperation({
+    summary: 'Publish kendaraan ke marketplace (Tahap 4 - tombol READY)',
+  })
   async publish(@Param('id') id: string, @Request() req) {
     return this.svc.publishToMarketplace(id, req.user.userId);
   }
@@ -150,6 +201,22 @@ export class InspectionController {
   async getByVehicle(@Param('vehicleId') vehicleId: string) {
     return this.svc.getInspectionsByVehicle(vehicleId);
   }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Detail inspeksi by ID' })
+  async findOne(@Param('id') id: string) {
+    return this.svc.getOneInspection(id);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update hasil inspeksi' })
+  async update(@Param('id') id: string, @Body() dto: CreateInspectionDto) {
+    return this.svc.updateInspection(id, dto);
+  }
 }
 
 // ============================================================
@@ -174,6 +241,26 @@ export class ZoneController {
   @ApiOperation({ summary: 'List zona per showroom' })
   async findByShowroom(@Param('showroomId') showroomId: string) {
     return this.svc.findZonesByShowroom(showroomId);
+  }
+
+  @Get(':id/vehicles')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List kendaraan yang ada di zona ini' })
+  async getVehicles(@Param('id') id: string) {
+    return this.svc.getVehiclesByZone(id);
+  }
+
+  @Patch(':id/capacity')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update kapasitas zona gudang' })
+  @ApiQuery({ name: 'capacity', type: Number })
+  async updateCapacity(
+    @Param('id') id: string,
+    @Query('capacity') capacity: number,
+  ) {
+    return this.svc.updateZoneCapacity(id, capacity);
   }
 }
 
@@ -227,18 +314,31 @@ export class AdminPaymentController {
   @Post(':vehicleId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Buat invoice pembayaran admin Rp 2.000.000 (Tahap 2)' })
+  @ApiOperation({
+    summary: 'Buat invoice pembayaran admin Rp 2.000.000 (Tahap 2)',
+  })
   async create(@Param('vehicleId') vehicleId: string, @Request() req) {
     return this.svc.createAdminPayment(vehicleId, req.user.userId);
   }
 
   @Post('webhook/callback')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Webhook callback dari Payment Gateway (admin fee)' })
+  @ApiOperation({
+    summary: 'Webhook callback dari Payment Gateway (admin fee)',
+  })
   async webhook(
-    @Body() body: { invoiceNumber: string; status: string; paymentMethod?: string },
+    @Body()
+    body: {
+      invoiceNumber: string;
+      status: string;
+      paymentMethod?: string;
+    },
   ) {
-    return this.svc.handleAdminPaymentWebhook(body.invoiceNumber, body.status, body.paymentMethod);
+    return this.svc.handleAdminPaymentWebhook(
+      body.invoiceNumber,
+      body.status,
+      body.paymentMethod,
+    );
   }
 
   @Get(':vehicleId')
@@ -266,13 +366,40 @@ export class PurchaseController {
     return this.svc.createPurchase(req.user.userId, dto);
   }
 
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Detail transaksi pembelian' })
+  async findOne(@Param('id') id: string) {
+    return this.svc.getOnePurchase(id);
+  }
+
+  @Patch(':id/confirm-payment')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Konfirmasi pembayaran manual (untuk cash/transfer offline)',
+  })
+  async confirmPayment(@Param('id') id: string, @Request() req) {
+    return this.svc.confirmPurchasePayment(id, req.user.userId);
+  }
+
   @Post('webhook/callback')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Webhook callback dari Payment Gateway (purchase)' })
   async webhook(
-    @Body() body: { invoiceNumber: string; status: string; paymentMethod?: string },
+    @Body()
+    body: {
+      invoiceNumber: string;
+      status: string;
+      paymentMethod?: string;
+    },
   ) {
-    return this.svc.handlePurchaseWebhook(body.invoiceNumber, body.status, body.paymentMethod);
+    return this.svc.handlePurchaseWebhook(
+      body.invoiceNumber,
+      body.status,
+      body.paymentMethod,
+    );
   }
 
   @Get('showroom/:showroomId')
@@ -296,7 +423,8 @@ export class StockLogController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Riwayat stok (audit trail)' })
-  @ApiQuery({ name: 'page', required: false }) @ApiQuery({ name: 'perPage', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'perPage', required: false })
   async getLogs(
     @Param('showroomId') showroomId: string,
     @Query('page') page?: number,
@@ -308,7 +436,9 @@ export class StockLogController {
   @Get(':showroomId/summary')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Summary stok per showroom (total, per status, in/out bulan ini)' })
+  @ApiOperation({
+    summary: 'Summary stok per showroom (total, per status, in/out bulan ini)',
+  })
   async getSummary(@Param('showroomId') showroomId: string) {
     return this.svc.getStockSummary(showroomId);
   }
