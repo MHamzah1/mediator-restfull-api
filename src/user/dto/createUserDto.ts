@@ -77,11 +77,38 @@ export class CreateUserDto {
   @ApiProperty({
     example: 'customer',
     description: 'Role pengguna',
-    enum: ['customer', 'admin', 'salesman', 'showroom_owner', 'warehouse_admin', 'inspector', 'mechanic'],
+    enum: [
+      'customer',
+      'admin',
+      'salesman',
+      'showroom_owner',
+      'warehouse_admin',
+      'inspector',
+      'mechanic',
+    ],
   })
   @IsNotEmpty()
-  @IsEnum(['customer', 'admin', 'salesman', 'showroom_owner', 'warehouse_admin', 'inspector', 'mechanic'], {
-    message: 'Role harus salah satu dari: customer, admin, salesman, showroom_owner, warehouse_admin, inspector, mechanic',
-  })
-  role: 'customer' | 'admin' | 'salesman' | 'showroom_owner' | 'warehouse_admin' | 'inspector' | 'mechanic';
+  @IsEnum(
+    [
+      'customer',
+      'admin',
+      'salesman',
+      'showroom_owner',
+      'warehouse_admin',
+      'inspector',
+      'mechanic',
+    ],
+    {
+      message:
+        'Role harus salah satu dari: customer, admin, salesman, showroom_owner, warehouse_admin, inspector, mechanic',
+    },
+  )
+  role:
+    | 'customer'
+    | 'admin'
+    | 'salesman'
+    | 'showroom_owner'
+    | 'warehouse_admin'
+    | 'inspector'
+    | 'mechanic';
 }
