@@ -7,9 +7,11 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CarModel } from './car-model.entity';
 import { User } from './user.entity';
+import { Variant } from './variant.entity';
+import { YearPrice } from './year-price.entity';
 
 @Entity('listings')
 export class Listing {
@@ -47,6 +49,34 @@ export class Listing {
   @ManyToOne(() => CarModel, { eager: true })
   @JoinColumn({ name: 'carModelId' })
   carModel: CarModel;
+
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Variant ID (dari tabel variants)',
+  })
+  @Column({ nullable: true })
+  variantId: string;
+
+  @ApiPropertyOptional({
+    description: 'Variant relation',
+  })
+  @ManyToOne(() => Variant, { nullable: true, eager: true })
+  @JoinColumn({ name: 'variantId' })
+  variant: Variant;
+
+  @ApiPropertyOptional({
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'YearPrice ID (harga pasar untuk tahun & variant ini)',
+  })
+  @Column({ nullable: true })
+  yearPriceId: string;
+
+  @ApiPropertyOptional({
+    description: 'YearPrice relation',
+  })
+  @ManyToOne(() => YearPrice, { nullable: true, eager: true })
+  @JoinColumn({ name: 'yearPriceId' })
+  yearPrice: YearPrice;
 
   @ApiProperty({
     example: 2020,

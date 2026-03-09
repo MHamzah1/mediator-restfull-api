@@ -12,6 +12,9 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  UploadedFiles,
+  UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -20,7 +23,10 @@ import {
   ApiParam,
   ApiQuery,
   ApiBody,
+  ApiConsumes,
 } from '@nestjs/swagger';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { multerS3Config, MulterS3File } from '../config/s3.config';
 import { WarehouseService } from './warehouse.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 import {
@@ -109,6 +115,8 @@ export class VehicleController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
+  @UseInterceptors(FilesInterceptor('images', 10, multerS3Config))
+  @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Register kendaraan baru ke warehouse (Tahap 2)',
     description:
@@ -116,29 +124,86 @@ export class VehicleController {
       'Pastikan sudah ada data di tabel variants dan year_prices sebelum register kendaraan.',
   })
   @ApiBody({
-    type: CreateWarehouseVehicleDto,
-    examples: {
-      contoh: {
-        summary: 'Contoh request',
-        value: {
-          showroomId: 'uuid-showroom',
-          variantId: 'uuid-dari-tabel-variants',
-          yearPriceId: 'uuid-dari-tabel-year-prices',
-          color: 'Hitam',
-          licensePlate: 'B 1234 ABC',
-          chassisNumber: 'MHKA6GJ3J1J012345',
-          engineNumber: '2NR-U123456',
-          mileage: 45000,
-          fuelType: 'bensin',
-          askingPrice: 230000000,
-          sellerName: 'John Doe',
-          sellerPhone: '081234567890',
+    schema: {
+      type: 'object',
+      required: [
+        'showroomId',
+        'variantId',
+        'yearPriceId',
+        'color',
+        'licensePlate',
+        'chassisNumber',
+        'engineNumber',
+        'mileage',
+        'fuelType',
+        'askingPrice',
+        'sellerName',
+        'sellerPhone',
+      ],
+      properties: {
+        showroomId: {
+          type: 'string',
+          example: 'uuid-showroom',
+          description: 'ID showroom tujuan',
+        },
+        variantId: {
+          type: 'string',
+          example: 'uuid-dari-tabel-variants',
+          description: 'ID variant dari tabel variants',
+        },
+        yearPriceId: {
+          type: 'string',
+          example: 'uuid-dari-tabel-year-prices',
+          description: 'ID year price dari tabel year_prices',
+        },
+        color: { type: 'string', example: 'Hitam' },
+        licensePlate: { type: 'string', example: 'B 1234 ABC' },
+        chassisNumber: { type: 'string', example: 'MHKA6GJ3J1J012345' },
+        engineNumber: { type: 'string', example: '2NR-U123456' },
+        mileage: { type: 'number', example: 45000 },
+        fuelType: { type: 'string', example: 'bensin' },
+        askingPrice: {
+          type: 'number',
+          example: 230000000,
+          description: 'Harga penawaran penjual',
+        },
+        sellerName: { type: 'string', example: 'John Doe' },
+        sellerPhone: { type: 'string', example: '081234567890' },
+        sellerWhatsapp: {
+          type: 'string',
+          example: '6281234567890',
+          description: 'Nomor WhatsApp seller (format: 628xxx)',
+        },
+        sellerKtp: { type: 'string', example: '3273012345678901' },
+        description: {
+          type: 'string',
+          example:
+            'Mobil terawat, service rutin di dealer resmi. Kondisi istimewa.',
+        },
+        condition: {
+          type: 'string',
+          example: 'bekas',
+          description: 'Kondisi mobil (baru/bekas)',
+        },
+        ownershipStatus: { type: 'string', example: 'Tangan Pertama' },
+        taxStatus: { type: 'string', example: 'Pajak Hidup' },
+        locationCity: { type: 'string', example: 'Jakarta Selatan' },
+        locationProvince: { type: 'string', example: 'DKI Jakarta' },
+        notes: { type: 'string', example: 'Catatan internal' },
+        images: {
+          type: 'array',
+          items: { type: 'string', format: 'binary' },
+          description: 'Upload 1-10 gambar mobil (max 5MB per file)',
         },
       },
     },
   })
-  async register(@Request() req, @Body() dto: CreateWarehouseVehicleDto) {
-    return this.svc.registerVehicle(req.user.userId, dto);
+  async register(
+    @Request() req,
+    @Body() dto: CreateWarehouseVehicleDto,
+    @UploadedFiles() files?: MulterS3File[],
+  ) {
+    return this.svc.registerVehicle(req.user.userId, dto, files);
   }
 
   @Get()

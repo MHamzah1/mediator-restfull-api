@@ -34,6 +34,7 @@ import { Listing } from '../entities/listing.entity';
 import { PaymentStatus } from '../entities/boost-transaction.entity';
 import { Variant } from '../entities/variant.entity';
 import { YearPrice } from '../entities/year-price.entity';
+import { MulterS3File } from '../config/s3.config';
 
 // DTOs
 import {
@@ -152,7 +153,11 @@ export class WarehouseService {
   // ============================================================
   // TAHAP 1 & 2: REGISTER VEHICLE + INSPECTION
   // ============================================================
-  async registerVehicle(userId: string, dto: CreateWarehouseVehicleDto) {
+  async registerVehicle(
+    userId: string,
+    dto: CreateWarehouseVehicleDto,
+    files?: MulterS3File[],
+  ) {
     const showroom = await this.showroomRepo.findOne({
       where: { id: dto.showroomId },
     });
@@ -195,6 +200,10 @@ export class WarehouseService {
     const seq = String(count + 1).padStart(5, '0');
     const barcode = `${showroom.code}-${new Date().getFullYear()}-${seq}`;
 
+    // ── Generate image URLs dari uploaded files ──────────────────────────────
+    const imageUrls =
+      files && files.length > 0 ? files.map((file) => file.location) : [];
+
     const vehicle = this.vehicleRepo.create({
       ...dto,
       brandName: variant.model.brand.name,
@@ -206,6 +215,7 @@ export class WarehouseService {
       yearPriceId: yp.id,
       sellerId: userId,
       barcode,
+      images: imageUrls,
       status: VehicleStatus.INSPECTING,
     });
     const saved = await this.vehicleRepo.save(vehicle);

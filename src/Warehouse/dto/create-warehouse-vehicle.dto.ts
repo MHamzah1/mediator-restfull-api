@@ -1,5 +1,13 @@
-import { IsNotEmpty, IsString, IsNumber, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsNumber,
+  IsOptional,
+  MinLength,
+  Matches,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude } from 'class-transformer';
 
 export class CreateWarehouseVehicleDto {
   // ── Referensi showroom ─────────────────────────────────────────────────────
@@ -77,13 +85,86 @@ export class CreateWarehouseVehicleDto {
   @IsString()
   sellerPhone: string;
 
+  @ApiPropertyOptional({
+    example: '6281234567890',
+    description: 'Nomor WhatsApp seller (format: 628xxx)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^628\d{8,13}$/, {
+    message: 'Format nomor WhatsApp tidak valid (harus 628xxxxxxxxx)',
+  })
+  sellerWhatsapp?: string;
+
   @ApiPropertyOptional({ example: '3273012345678901' })
   @IsOptional()
   @IsString()
   sellerKtp?: string;
 
+  // ── Marketplace listing fields ─────────────────────────────────────────────
+  @ApiPropertyOptional({
+    example: 'Mobil terawat, service rutin di dealer resmi. Kondisi istimewa.',
+    description: 'Deskripsi lengkap mobil (minimal 50 karakter)',
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(50, { message: 'Deskripsi minimal 50 karakter' })
+  description?: string;
+
+  @ApiPropertyOptional({
+    example: 'bekas',
+    description: 'Kondisi mobil (baru/bekas)',
+    default: 'bekas',
+  })
+  @IsOptional()
+  @IsString()
+  condition?: string;
+
+  @ApiPropertyOptional({
+    example: 'Tangan Pertama',
+    description: 'Status kepemilikan',
+  })
+  @IsOptional()
+  @IsString()
+  ownershipStatus?: string;
+
+  @ApiPropertyOptional({
+    example: 'Pajak Hidup',
+    description: 'Status pajak',
+  })
+  @IsOptional()
+  @IsString()
+  taxStatus?: string;
+
+  @ApiPropertyOptional({
+    example: 'Jakarta Selatan',
+    description: 'Kota lokasi mobil',
+  })
+  @IsOptional()
+  @IsString()
+  locationCity?: string;
+
+  @ApiPropertyOptional({
+    example: 'DKI Jakarta',
+    description: 'Provinsi lokasi mobil',
+  })
+  @IsOptional()
+  @IsString()
+  locationProvince?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   notes?: string;
+
+  // Field ini untuk menerima files dari multipart/form-data
+  // Actual file handling dilakukan oleh @UploadedFiles() decorator
+  @ApiPropertyOptional({
+    type: 'array',
+    items: { type: 'string', format: 'binary' },
+    description: 'Upload 1-10 gambar mobil (max 5MB per file)',
+  })
+  @IsOptional()
+  @Exclude() // Exclude dari transformation karena ditangani oleh multer
+  images?: any;
 }

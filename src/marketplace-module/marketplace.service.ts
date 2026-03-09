@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CarModel } from '../entities/car-model.entity';
 import { User } from '../entities/user.entity';
+import { Variant } from '../entities/variant.entity';
+import { YearPrice } from '../entities/year-price.entity';
 import { CreateListingDto } from './dto/create-listing.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { FilterListingDto } from './dto/filter-listing.dto';
@@ -27,6 +29,10 @@ export class MarketplaceService {
     private carModelRepository: Repository<CarModel>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(Variant)
+    private variantRepository: Repository<Variant>,
+    @InjectRepository(YearPrice)
+    private yearPriceRepository: Repository<YearPrice>,
   ) {}
 
   // Helper untuk menghasilkan URL gambar dari S3
@@ -127,17 +133,38 @@ export class MarketplaceService {
     createListingDto: CreateListingDto,
     files: MulterS3File[],
   ): Promise<{ message: string; data: Listing }> {
-    const carModel = await this.carModelRepository.findOne({
-      where: { id: createListingDto.carModelId },
-      relations: ['brand'],
+    // Lookup Variant untuk mendapatkan brand, model, dan transmisi
+    const variant = await this.variantRepository.findOne({
+      where: { id: createListingDto.variantId },
+      relations: ['model', 'model.brand'],
     });
 
-    if (!carModel) {
-      throw new NotFoundException('Model mobil tidak ditemukan');
+    if (!variant) {
+      throw new NotFoundException('Variant tidak ditemukan');
     }
 
-    if (!carModel.isActive) {
-      throw new BadRequestException('Model mobil tidak aktif');
+    if (!variant.isActive) {
+      throw new BadRequestException('Variant tidak aktif');
+    }
+
+    // Lookup YearPrice untuk mendapatkan tahun
+    const yearPrice = await this.yearPriceRepository.findOne({
+      where: { id: createListingDto.yearPriceId },
+    });
+
+    if (!yearPrice) {
+      throw new NotFoundException('YearPrice tidak ditemukan');
+    }
+
+    if (!yearPrice.isActive) {
+      throw new BadRequestException('YearPrice tidak aktif');
+    }
+
+    // Validasi bahwa yearPrice harus milik variant yang sama
+    if (yearPrice.variantId !== createListingDto.variantId) {
+      throw new BadRequestException(
+        'YearPrice harus sesuai dengan Variant yang dipilih',
+      );
     }
 
     const user = await this.userRepository.findOne({
@@ -151,9 +178,14 @@ export class MarketplaceService {
     // Generate image URLs dari uploaded files
     const imageUrls = this.generateImageUrls(files);
 
+    // Auto-populate data dari variant dan yearPrice
+    // Gunakan transmission dari DTO jika ada, jika tidak ambil dari variant
     const listing = this.listingRepository.create({
       ...createListingDto,
       sellerId: userId,
+      carModelId: variant.modelId,
+      year: yearPrice.year,
+      transmission: createListingDto.transmission || variant.transmissionType,
       images: imageUrls,
     });
 
@@ -175,6 +207,7 @@ export class MarketplaceService {
       isActive,
       brandId,
       carModelId,
+      variantId,
       minPrice,
       maxPrice,
       yearMin,
@@ -192,11 +225,13 @@ export class MarketplaceService {
 
     const queryBuilder = this.listingRepository.createQueryBuilder('listing');
 
-    // Join dengan carModel, brand, dan seller
+    // Join dengan carModel, brand, seller, variant, dan yearPrice
     queryBuilder
       .leftJoinAndSelect('listing.carModel', 'carModel')
       .leftJoinAndSelect('carModel.brand', 'brand')
-      .leftJoinAndSelect('listing.seller', 'seller');
+      .leftJoinAndSelect('listing.seller', 'seller')
+      .leftJoinAndSelect('listing.variant', 'variant')
+      .leftJoinAndSelect('listing.yearPrice', 'yearPrice');
 
     // Filter berdasarkan search (brand name, model name, atau deskripsi)
     if (search) {
@@ -222,6 +257,13 @@ export class MarketplaceService {
     if (carModelId) {
       queryBuilder.andWhere('listing.carModelId = :carModelId', {
         carModelId,
+      });
+    }
+
+    // Filter berdasarkan variant
+    if (variantId) {
+      queryBuilder.andWhere('listing.variantId = :variantId', {
+        variantId,
       });
     }
 
@@ -375,7 +417,13 @@ export class MarketplaceService {
   async findOne(id: string): Promise<{ message: string; data: Listing }> {
     const listing = await this.listingRepository.findOne({
       where: { id },
-      relations: ['carModel', 'carModel.brand', 'seller'],
+      relations: [
+        'carModel',
+        'carModel.brand',
+        'seller',
+        'variant',
+        'yearPrice',
+      ],
     });
 
     if (!listing) {

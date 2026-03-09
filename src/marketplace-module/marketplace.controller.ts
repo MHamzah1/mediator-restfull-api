@@ -49,11 +49,10 @@ export class MarketplaceController {
     schema: {
       type: 'object',
       required: [
-        'carModelId',
-        'year',
+        'variantId',
+        'yearPriceId',
         'price',
         'mileage',
-        'transmission',
         'fuelType',
         'color',
         'locationCity',
@@ -63,14 +62,25 @@ export class MarketplaceController {
         'images',
       ],
       properties: {
-        carModelId: {
+        variantId: {
           type: 'string',
           example: '123e4567-e89b-12d3-a456-426614174000',
+          description:
+            'Variant ID dari tabel variants (menentukan brand, model, transmisi)',
         },
-        year: { type: 'number', example: 2020 },
+        yearPriceId: {
+          type: 'string',
+          example: '123e4567-e89b-12d3-a456-426614174000',
+          description:
+            'YearPrice ID dari tabel year_prices (menentukan tahun & harga pasar)',
+        },
         price: { type: 'number', example: 150000000 },
         mileage: { type: 'number', example: 50000 },
-        transmission: { type: 'string', example: 'automatic' },
+        transmission: {
+          type: 'string',
+          example: 'automatic',
+          description: 'Opsional - akan diambil dari variant jika tidak diisi',
+        },
         fuelType: { type: 'string', example: 'bensin' },
         color: { type: 'string', example: 'Hitam Metalik' },
         locationCity: { type: 'string', example: 'Jakarta Selatan' },

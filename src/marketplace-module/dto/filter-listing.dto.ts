@@ -91,6 +91,14 @@ export class FilterListingDto {
   carModelId?: string;
 
   @ApiPropertyOptional({
+    description: 'Filter berdasarkan Variant ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsOptional()
+  @IsUUID('4')
+  variantId?: string;
+
+  @ApiPropertyOptional({
     description: 'Harga minimal',
     example: 100000000,
   })

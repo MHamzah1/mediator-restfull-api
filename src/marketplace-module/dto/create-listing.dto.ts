@@ -16,22 +16,21 @@ import { Type, Exclude } from 'class-transformer';
 export class CreateListingDto {
   @ApiProperty({
     example: '123e4567-e89b-12d3-a456-426614174000',
-    description: 'Car Model ID',
+    description:
+      'Variant ID dari tabel variants (menentukan brand, model, transmisi)',
   })
-  @IsNotEmpty({ message: 'Car Model ID tidak boleh kosong' })
-  @IsUUID('4', { message: 'Car Model ID harus berformat UUID' })
-  carModelId: string;
+  @IsNotEmpty({ message: 'Variant ID tidak boleh kosong' })
+  @IsUUID('4', { message: 'Variant ID harus berformat UUID' })
+  variantId: string;
 
   @ApiProperty({
-    example: 2020,
-    description: 'Tahun produksi mobil (1990-2025)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    description:
+      'YearPrice ID dari tabel year_prices (menentukan tahun & harga pasar)',
   })
-  @IsNotEmpty({ message: 'Tahun tidak boleh kosong' })
-  @Type(() => Number)
-  @IsNumber({}, { message: 'Tahun harus berupa angka' })
-  @Min(1990, { message: 'Tahun minimal 1990' })
-  @Max(2026, { message: 'Tahun maksimal 2025' })
-  year: number;
+  @IsNotEmpty({ message: 'YearPrice ID tidak boleh kosong' })
+  @IsUUID('4', { message: 'YearPrice ID harus berformat UUID' })
+  yearPriceId: string;
 
   @ApiProperty({
     example: 150000000,
@@ -53,13 +52,14 @@ export class CreateListingDto {
   @Min(0, { message: 'Kilometer tidak boleh negatif' })
   mileage: number;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'automatic',
-    description: 'Jenis transmisi (manual/automatic)',
+    description:
+      'Jenis transmisi (manual/automatic). Jika tidak diisi, akan diambil dari variant',
   })
-  @IsNotEmpty({ message: 'Transmisi tidak boleh kosong' })
+  @IsOptional()
   @IsString({ message: 'Transmisi harus berupa string' })
-  transmission: string;
+  transmission?: string;
 
   @ApiProperty({
     example: 'bensin',

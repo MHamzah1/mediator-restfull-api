@@ -116,8 +116,52 @@ export class WarehouseVehicle {
   @Column({ length: 20 })
   sellerPhone: string;
 
+  @ApiPropertyOptional({
+    example: '6281234567890',
+    description: 'Nomor WhatsApp seller',
+  })
+  @Column({ length: 20, nullable: true })
+  sellerWhatsapp: string;
+
   @Column({ length: 20, nullable: true })
   sellerKtp: string;
+
+  // ============ MARKETPLACE LISTING FIELDS ============
+
+  @ApiPropertyOptional({ description: 'Deskripsi lengkap mobil' })
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiPropertyOptional({ example: 'bekas', description: 'Kondisi mobil' })
+  @Column({ nullable: true, default: 'bekas' })
+  condition: string;
+
+  @ApiPropertyOptional({
+    example: 'Tangan Pertama',
+    description: 'Status kepemilikan',
+  })
+  @Column({ nullable: true })
+  ownershipStatus: string;
+
+  @ApiPropertyOptional({ example: 'Pajak Hidup', description: 'Status pajak' })
+  @Column({ nullable: true })
+  taxStatus: string;
+
+  @ApiPropertyOptional({
+    example: 'Jakarta Selatan',
+    description: 'Kota lokasi mobil',
+  })
+  @Column({ nullable: true })
+  locationCity: string;
+
+  @ApiPropertyOptional({
+    example: 'DKI Jakarta',
+    description: 'Provinsi lokasi mobil',
+  })
+  @Column({ nullable: true })
+  locationProvince: string;
+
+  // ============ END MARKETPLACE LISTING FIELDS ============
 
   @ApiProperty({ enum: VehicleStatus })
   @Column({ type: 'varchar', default: VehicleStatus.INSPECTING })
