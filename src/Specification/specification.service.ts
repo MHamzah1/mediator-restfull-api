@@ -64,7 +64,7 @@ export class SpecificationService {
     // Filter berdasarkan search (spec name atau spec value)
     if (search) {
       queryBuilder.andWhere(
-        '(specification.specName LIKE :search OR specification.specValue LIKE :search)',
+        '(specification.specName ILIKE :search OR specification.specValue ILIKE :search)',
         {
           search: `%${search}%`,
         },

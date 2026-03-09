@@ -201,7 +201,7 @@ export class MarketplaceService {
     // Filter berdasarkan search (brand name, model name, atau deskripsi)
     if (search) {
       queryBuilder.andWhere(
-        '(brand.name LIKE :search OR carModel.modelName LIKE :search OR listing.description LIKE :search)',
+        '(brand.name ILIKE :search OR carModel.modelName ILIKE :search OR listing.description ILIKE :search)',
         {
           search: `%${search}%`,
         },
@@ -255,16 +255,19 @@ export class MarketplaceService {
 
     // Filter berdasarkan location city
     if (locationCity) {
-      queryBuilder.andWhere('listing.locationCity LIKE :locationCity', {
+      queryBuilder.andWhere('listing.locationCity ILIKE :locationCity', {
         locationCity: `%${locationCity}%`,
       });
     }
 
     // Filter berdasarkan location province
     if (locationProvince) {
-      queryBuilder.andWhere('listing.locationProvince LIKE :locationProvince', {
-        locationProvince: `%${locationProvince}%`,
-      });
+      queryBuilder.andWhere(
+        'listing.locationProvince ILIKE :locationProvince',
+        {
+          locationProvince: `%${locationProvince}%`,
+        },
+      );
     }
 
     // Filter berdasarkan condition

@@ -138,7 +138,7 @@ export class CarModelService {
     // Filter berdasarkan search (model name atau brand name)
     if (search) {
       queryBuilder.andWhere(
-        '(carModel.modelName LIKE :search OR brand.name LIKE :search)',
+        '(carModel.modelName ILIKE :search OR brand.name ILIKE :search)',
         {
           search: `%${search}%`,
         },

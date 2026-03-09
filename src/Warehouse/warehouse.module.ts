@@ -12,6 +12,8 @@ import { AdminPayment } from '../entities/admin-payment.entity';
 import { PurchaseTransaction } from '../entities/purchase-transaction.entity';
 import { StockLog } from '../entities/stock-log.entity';
 import { Listing } from '../entities/listing.entity';
+import { Variant } from '../entities/variant.entity';
+import { YearPrice } from '../entities/year-price.entity';
 
 // Service
 import { WarehouseService } from './warehouse.service';
@@ -41,6 +43,8 @@ import {
       PurchaseTransaction,
       StockLog,
       Listing,
+      Variant,
+      YearPrice,
     ]),
   ],
   controllers: [

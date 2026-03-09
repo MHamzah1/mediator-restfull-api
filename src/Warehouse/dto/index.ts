@@ -1,5 +1,6 @@
 export * from './create-showroom.dto';
 export * from './create-warehouse-vehicle.dto';
+export * from './update-warehouse-vehicle.dto';
 export * from './create-inspection.dto';
 export * from './create-zone.dto';
 export * from './place-vehicle.dto';

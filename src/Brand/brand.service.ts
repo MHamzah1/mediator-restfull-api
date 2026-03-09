@@ -135,7 +135,7 @@ export class BrandService {
 
     // Filter berdasarkan search (nama)
     if (search) {
-      queryBuilder.andWhere('brand.name LIKE :search', {
+      queryBuilder.andWhere('brand.name ILIKE :search', {
         search: `%${search}%`,
       });
     }

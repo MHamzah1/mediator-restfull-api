@@ -146,7 +146,7 @@ export class UsersService {
     // Filter berdasarkan search (nama atau email)
     if (search) {
       queryBuilder.andWhere(
-        '(user.fullName LIKE :search OR user.email LIKE :search)',
+        '(user.fullName ILIKE :search OR user.email ILIKE :search)',
         { search: `%${search}%` },
       );
     }

@@ -1,11 +1,18 @@
 import {
-  Entity, PrimaryGeneratedColumn, Column, CreateDateColumn,
-  UpdateDateColumn, ManyToOne, JoinColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { User } from './user.entity';
 import { Showroom } from './showroom.entity';
 import { CarModel } from './car-model.entity';
+import { Variant } from './variant.entity';
+import { YearPrice } from './year-price.entity';
 
 export enum VehicleStatus {
   INSPECTING = 'inspecting',
@@ -44,6 +51,24 @@ export class WarehouseVehicle {
   @ManyToOne(() => CarModel, { nullable: true, eager: true })
   @JoinColumn({ name: 'carModelId' })
   carModel: CarModel;
+
+  @ApiPropertyOptional({ description: 'Variant ID (dari tabel variants)' })
+  @Column({ nullable: true })
+  variantId: string;
+
+  @ManyToOne(() => Variant, { nullable: true, eager: true })
+  @JoinColumn({ name: 'variantId' })
+  variant: Variant;
+
+  @ApiPropertyOptional({
+    description: 'YearPrice ID (harga pasar untuk tahun & variant ini)',
+  })
+  @Column({ nullable: true })
+  yearPriceId: string;
+
+  @ManyToOne(() => YearPrice, { nullable: true, eager: true })
+  @JoinColumn({ name: 'yearPriceId' })
+  yearPrice: YearPrice;
 
   @ApiProperty({ example: 'SRM-JKT01-2026-00001' })
   @Column({ length: 50, unique: true })

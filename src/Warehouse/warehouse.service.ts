@@ -32,11 +32,14 @@ import {
 import { StockLog, StockAction } from '../entities/stock-log.entity';
 import { Listing } from '../entities/listing.entity';
 import { PaymentStatus } from '../entities/boost-transaction.entity';
+import { Variant } from '../entities/variant.entity';
+import { YearPrice } from '../entities/year-price.entity';
 
 // DTOs
 import {
   CreateShowroomDto,
   CreateWarehouseVehicleDto,
+  UpdateWarehouseVehicleDto,
   CreateInspectionDto,
   CreateZoneDto,
   PlaceVehicleDto,
@@ -64,6 +67,8 @@ export class WarehouseService {
     private purchaseRepo: Repository<PurchaseTransaction>,
     @InjectRepository(StockLog) private stockLogRepo: Repository<StockLog>,
     @InjectRepository(Listing) private listingRepo: Repository<Listing>,
+    @InjectRepository(Variant) private variantRepo: Repository<Variant>,
+    @InjectRepository(YearPrice) private yearPriceRepo: Repository<YearPrice>,
   ) {}
 
   // ============================================================
@@ -153,7 +158,37 @@ export class WarehouseService {
     });
     if (!showroom) throw new NotFoundException('Showroom tidak ditemukan');
 
-    // Generate barcode
+    // ── Cek duplikasi chassisNumber & licensePlate ────────────────────────────
+    const existingChassis = await this.vehicleRepo.findOne({
+      where: { chassisNumber: dto.chassisNumber },
+    });
+    if (existingChassis)
+      throw new BadRequestException(
+        `Nomor rangka (chassisNumber) "${dto.chassisNumber}" sudah terdaftar di sistem.`,
+      );
+
+    const existingPlate = await this.vehicleRepo.findOne({
+      where: { licensePlate: dto.licensePlate },
+    });
+    if (existingPlate)
+      throw new BadRequestException(
+        `Nomor plat (licensePlate) "${dto.licensePlate}" sudah terdaftar di sistem.`,
+      );
+
+    // ── Lookup Variant (brand, model, transmisi) ────────────────────────────
+    const variant = await this.variantRepo.findOne({
+      where: { id: dto.variantId },
+      relations: ['model', 'model.brand'],
+    });
+    if (!variant) throw new NotFoundException('Variant tidak ditemukan');
+
+    // ── Lookup YearPrice (tahun & harga pasar) ──────────────────────────────
+    const yp = await this.yearPriceRepo.findOne({
+      where: { id: dto.yearPriceId },
+    });
+    if (!yp) throw new NotFoundException('YearPrice tidak ditemukan');
+
+    // ── Generate barcode ──────────────────────────────────────────────────────
     const count = await this.vehicleRepo.count({
       where: { showroomId: dto.showroomId },
     });
@@ -162,6 +197,13 @@ export class WarehouseService {
 
     const vehicle = this.vehicleRepo.create({
       ...dto,
+      brandName: variant.model.brand.name,
+      modelName: variant.model.modelName,
+      year: yp.year,
+      transmission: variant.transmissionType,
+      carModelId: variant.modelId,
+      variantId: variant.id,
+      yearPriceId: yp.id,
       sellerId: userId,
       barcode,
       status: VehicleStatus.INSPECTING,
@@ -247,6 +289,43 @@ export class WarehouseService {
         'Kendaraan dengan barcode tersebut tidak ditemukan',
       );
     return { message: 'Kendaraan ditemukan', data: vehicle };
+  }
+
+  async updateVehicle(id: string, dto: UpdateWarehouseVehicleDto) {
+    const vehicle = await this.vehicleRepo.findOne({ where: { id } });
+    if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
+
+    // Update referensi variant jika diberikan
+    if (dto.variantId) {
+      const variant = await this.variantRepo.findOne({
+        where: { id: dto.variantId },
+        relations: ['model', 'model.brand'],
+      });
+      if (!variant) throw new NotFoundException('Variant tidak ditemukan');
+      vehicle.variantId = variant.id;
+      vehicle.carModelId = variant.modelId;
+      vehicle.brandName = variant.model.brand.name;
+      vehicle.modelName = variant.model.modelName;
+      vehicle.transmission = variant.transmissionType;
+    }
+
+    // Update referensi year price jika diberikan
+    if (dto.yearPriceId) {
+      const yp = await this.yearPriceRepo.findOne({
+        where: { id: dto.yearPriceId },
+      });
+      if (!yp) throw new NotFoundException('YearPrice tidak ditemukan');
+      vehicle.yearPriceId = yp.id;
+      vehicle.year = yp.year;
+    }
+
+    // Merge field fisik & penjual (variantId & yearPriceId sudah dihandle di atas)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { variantId: _v, yearPriceId: _yp, ...rest } = dto;
+    Object.assign(vehicle, rest);
+
+    const saved = await this.vehicleRepo.save(vehicle);
+    return { message: 'Kendaraan berhasil diupdate', data: saved };
   }
 
   async updateVehicleStatus(

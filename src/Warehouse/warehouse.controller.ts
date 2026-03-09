@@ -16,16 +16,17 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { WarehouseService } from './warehouse.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth/jwt-auth.guard';
 import {
   CreateShowroomDto,
   CreateWarehouseVehicleDto,
+  UpdateWarehouseVehicleDto,
   CreateInspectionDto,
   CreateZoneDto,
   PlaceVehicleDto,
@@ -108,7 +109,34 @@ export class VehicleController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Register kendaraan baru ke warehouse (Tahap 2)' })
+  @ApiOperation({
+    summary: 'Register kendaraan baru ke warehouse (Tahap 2)',
+    description:
+      'brandName, modelName, year, dan transmission diambil otomatis dari `variantId` dan `yearPriceId`. ' +
+      'Pastikan sudah ada data di tabel variants dan year_prices sebelum register kendaraan.',
+  })
+  @ApiBody({
+    type: CreateWarehouseVehicleDto,
+    examples: {
+      contoh: {
+        summary: 'Contoh request',
+        value: {
+          showroomId: 'uuid-showroom',
+          variantId: 'uuid-dari-tabel-variants',
+          yearPriceId: 'uuid-dari-tabel-year-prices',
+          color: 'Hitam',
+          licensePlate: 'B 1234 ABC',
+          chassisNumber: 'MHKA6GJ3J1J012345',
+          engineNumber: '2NR-U123456',
+          mileage: 45000,
+          fuelType: 'bensin',
+          askingPrice: 230000000,
+          sellerName: 'John Doe',
+          sellerPhone: '081234567890',
+        },
+      },
+    },
+  })
   async register(@Request() req, @Body() dto: CreateWarehouseVehicleDto) {
     return this.svc.registerVehicle(req.user.userId, dto);
   }
@@ -140,6 +168,18 @@ export class VehicleController {
   })
   async findOne(@Param('id') id: string) {
     return this.svc.findOneVehicle(id);
+  }
+
+  @Put(':id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Update data kendaraan warehouse' })
+  @ApiParam({ name: 'id', description: 'ID kendaraan' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateWarehouseVehicleDto,
+  ) {
+    return this.svc.updateVehicle(id, dto);
   }
 
   @Patch(':id/status')
