@@ -18,6 +18,7 @@ import {
   deleteFromS3,
   getS3KeyFromUrl,
   MulterS3File,
+  convertToMulterS3File,
 } from 'src/config/s3.config';
 
 @Injectable()
@@ -35,14 +36,21 @@ export class MarketplaceService {
     private yearPriceRepository: Repository<YearPrice>,
   ) {}
 
-  // Helper untuk menghasilkan URL gambar dari S3
-  private generateImageUrls(files: MulterS3File[]): string[] {
-    // Simpan URL lengkap dari S3
-    return files.map((file) => file.location);
+  // Helper untuk menghasilkan URL gambar
+  private generateImageUrls(files: Express.Multer.File[]): string[] {
+    return files.map((file) => {
+      // Jika sudah punya location (S3), gunakan itu
+      if ((file as MulterS3File).location) {
+        return (file as MulterS3File).location;
+      }
+      // Jika local storage, convert dan gunakan location
+      const converted = convertToMulterS3File(file);
+      return converted.location;
+    });
   }
 
   private async deleteFiles(filePaths: string[]): Promise<void> {
-    // Hapus file dari S3
+    // Hapus file
     for (const filePath of filePaths) {
       const key = getS3KeyFromUrl(filePath);
       await deleteFromS3(key);

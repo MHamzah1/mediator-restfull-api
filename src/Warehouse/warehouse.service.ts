@@ -34,7 +34,7 @@ import { Listing } from '../entities/listing.entity';
 import { PaymentStatus } from '../entities/boost-transaction.entity';
 import { Variant } from '../entities/variant.entity';
 import { YearPrice } from '../entities/year-price.entity';
-import { MulterS3File } from '../config/s3.config';
+import { MulterS3File, convertToMulterS3File } from '../config/s3.config';
 
 // DTOs
 import {
@@ -202,7 +202,17 @@ export class WarehouseService {
 
     // ── Generate image URLs dari uploaded files ──────────────────────────────
     const imageUrls =
-      files && files.length > 0 ? files.map((file) => file.location) : [];
+      files && files.length > 0
+        ? files.map((file) => {
+            // Jika sudah punya location (S3), gunakan itu
+            if ((file as MulterS3File).location) {
+              return (file as MulterS3File).location;
+            }
+            // Jika local storage, convert dan gunakan location
+            const converted = convertToMulterS3File(file);
+            return converted.location;
+          })
+        : [];
 
     const vehicle = this.vehicleRepo.create({
       ...dto,

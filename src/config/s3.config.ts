@@ -1,39 +1,55 @@
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { BadRequestException } from '@nestjs/common';
-import * as multerS3 from 'multer-s3';
-import { extname } from 'path';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync, unlinkSync } from 'fs';
 
-// Interface untuk file yang diupload ke S3
+// Interface untuk file yang diupload (kompatibel dengan S3 dan local)
 export interface MulterS3File extends Express.Multer.File {
-  location: string; // URL S3
-  key: string; // S3 key
-  bucket: string; // Nama bucket
+  location: string; // URL file
+  key: string; // File path/key
+  bucket: string; // Nama bucket (untuk S3) atau folder (untuk local)
 }
 
-// Konfigurasi S3 Client
-export const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'ap-southeast-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
-});
+// Base URL untuk akses file (sesuaikan dengan domain/port server Anda)
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
-// Nama bucket S3
-export const S3_BUCKET = process.env.AWS_S3_BUCKET || 'mediator-uploads';
+// Folder untuk menyimpan file uploads
+const UPLOAD_DIR = join(process.cwd(), 'uploads');
 
-// Konfigurasi Multer untuk upload ke S3
+// Pastikan folder uploads ada
+if (!existsSync(UPLOAD_DIR)) {
+  mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
+// Subfolder untuk listings
+const LISTINGS_DIR = join(UPLOAD_DIR, 'listings');
+if (!existsSync(LISTINGS_DIR)) {
+  mkdirSync(LISTINGS_DIR, { recursive: true });
+}
+
+// Subfolder untuk warehouse
+const WAREHOUSE_DIR = join(UPLOAD_DIR, 'warehouse');
+if (!existsSync(WAREHOUSE_DIR)) {
+  mkdirSync(WAREHOUSE_DIR, { recursive: true });
+}
+
+// Konfigurasi Multer untuk upload ke local storage
 export const multerS3Config = {
-  storage: multerS3({
-    s3: s3Client,
-    bucket: S3_BUCKET,
-    acl: 'public-read', // File dapat diakses publik
-    contentType: multerS3.AUTO_CONTENT_TYPE,
-    key: (req, file, cb) => {
+  storage: diskStorage({
+    destination: (req, file, cb) => {
+      // Tentukan folder berdasarkan route
+      const isWarehouse = req.originalUrl.includes('/warehouse/');
+      const destDir = isWarehouse ? WAREHOUSE_DIR : LISTINGS_DIR;
+      cb(null, destDir);
+    },
+    filename: (req, file, cb) => {
       // Generate unique filename
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
       const ext = extname(file.originalname);
-      const filename = `listings/listing-${uniqueSuffix}${ext}`;
+      const prefix = req.originalUrl.includes('/warehouse/')
+        ? 'vehicle'
+        : 'listing';
+      const filename = `${prefix}-${uniqueSuffix}${ext}`;
       cb(null, filename);
     },
   }),
@@ -61,23 +77,21 @@ export const multerS3Config = {
   },
 };
 
-// Helper function untuk menghapus file dari S3
+// Helper function untuk menghapus file dari local storage
 export async function deleteFromS3(key: string): Promise<void> {
   try {
-    const command = new DeleteObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: key,
-    });
-    await s3Client.send(command);
+    const filePath = join(process.cwd(), key);
+    if (existsSync(filePath)) {
+      unlinkSync(filePath);
+    }
   } catch (error) {
-    console.error('Error deleting from S3:', error);
+    console.error('Error deleting file:', error);
   }
 }
 
-// Helper function untuk mendapatkan S3 key dari URL
+// Helper function untuk mendapatkan file path dari URL
 export function getS3KeyFromUrl(url: string): string {
-  // URL format: https://bucket-name.s3.region.amazonaws.com/listings/filename.jpg
-  // atau: /listings/filename.jpg (relative path)
+  // URL format: http://localhost:3000/uploads/listings/filename.jpg
   if (url.startsWith('http')) {
     const urlObj = new URL(url);
     return urlObj.pathname.substring(1); // Remove leading slash
@@ -85,8 +99,21 @@ export function getS3KeyFromUrl(url: string): string {
   return url.startsWith('/') ? url.substring(1) : url;
 }
 
-// Helper function untuk generate full S3 URL
+// Helper function untuk generate full URL
 export function getS3Url(key: string): string {
-  const region = process.env.AWS_REGION || 'ap-southeast-1';
-  return `https://${S3_BUCKET}.s3.${region}.amazonaws.com/${key}`;
+  return `${BASE_URL}/${key}`;
+}
+
+// Helper untuk mengkonversi Express.Multer.File ke MulterS3File format
+export function convertToMulterS3File(file: Express.Multer.File): MulterS3File {
+  const isWarehouse = file.destination.includes('warehouse');
+  const folder = isWarehouse ? 'warehouse' : 'listings';
+  const key = `uploads/${folder}/${file.filename}`;
+
+  return {
+    ...file,
+    location: `/${key}`, // Simpan sebagai relative path tanpa BASE_URL
+    key: key,
+    bucket: 'local',
+  };
 }
