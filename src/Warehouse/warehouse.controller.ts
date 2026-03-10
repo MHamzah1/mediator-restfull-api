@@ -39,6 +39,7 @@ import {
   CreateRepairDto,
   CreatePurchaseDto,
   QueryWarehouseDto,
+  QueryShowroomViewDto,
 } from './dto';
 import { VehicleStatus } from '../entities/warehouse-vehicle.entity';
 import { RepairStatus } from '../entities/repair-order.entity';
@@ -280,6 +281,65 @@ export class VehicleController {
   })
   async publish(@Param('id') id: string, @Request() req) {
     return this.svc.publishToMarketplace(id, req.user.userId);
+  }
+
+  @Post(':id/mark-ready')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Tandai kendaraan SIAP JUAL & pindahkan ke Gudang Ready Jual',
+    description:
+      'Otomatis mengubah status kendaraan menjadi READY dan memindahkan ke zona bertipe READY. ' +
+      'Jika zona READY belum ada, akan dibuat otomatis. ' +
+      'Status yang diizinkan: REGISTERED, IN_WAREHOUSE, IN_REPAIR.',
+  })
+  @ApiParam({ name: 'id', description: 'ID kendaraan' })
+  async markReady(@Param('id') id: string, @Request() req) {
+    return this.svc.markAsReadyToSell(id, req.user.userId);
+  }
+}
+
+// ============================================================
+// SHOWROOM VIEW ENDPOINTS (Card-based display)
+// ============================================================
+@ApiTags('Warehouse - Showroom View')
+@Controller('api/warehouse/showroom-view')
+export class ShowroomViewController {
+  constructor(private readonly svc: WarehouseService) {}
+
+  @Get(':showroomId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'Tampilan showroom (card-based) — list kendaraan dengan data lengkap',
+    description:
+      'Mengembalikan data kendaraan per showroom dalam format card-friendly. ' +
+      'Termasuk: info mobil, zona saat ini, hasil inspeksi terakhir, status repair, ' +
+      'dan daftar actions yang tersedia. Mendukung filter, search, sort, dan pagination.',
+  })
+  @ApiParam({ name: 'showroomId', description: 'ID showroom' })
+  async getShowroomView(
+    @Param('showroomId') showroomId: string,
+    @Query() query: QueryShowroomViewDto,
+  ) {
+    return this.svc.getShowroomView(showroomId, query);
+  }
+
+  @Get('vehicle/:vehicleId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary:
+      'Detail kendaraan lengkap (klik card) — inspeksi, repair, placement, dsb.',
+    description:
+      'Mengembalikan semua informasi terkait satu kendaraan: data lengkap, ' +
+      'riwayat inspeksi, riwayat penempatan, repair orders, pembayaran admin, ' +
+      'transaksi pembelian, stock logs, dan actions yang tersedia.',
+  })
+  @ApiParam({ name: 'vehicleId', description: 'ID kendaraan' })
+  async getVehicleDetail(@Param('vehicleId') vehicleId: string) {
+    return this.svc.getVehicleDetailForShowroom(vehicleId);
   }
 }
 

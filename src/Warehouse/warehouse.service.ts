@@ -47,7 +47,9 @@ import {
   CreateRepairDto,
   CreatePurchaseDto,
   QueryWarehouseDto,
+  QueryShowroomViewDto,
 } from './dto';
+import { ZoneType } from '../entities/warehouse-zone.entity';
 
 @Injectable()
 export class WarehouseService {
@@ -1005,5 +1007,559 @@ export class WarehouseService {
         thisMonth: { vehicleIn, vehicleOut },
       },
     };
+  }
+
+  // ============================================================
+  // FITUR: MARK AS READY TO SELL (Siap Jual)
+  // Atomik: ubah status → READY + pindahkan ke zona READY
+  // ============================================================
+  async markAsReadyToSell(vehicleId: string, userId: string) {
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+      relations: ['showroom'],
+    });
+    if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
+
+    // Validasi: hanya kendaraan IN_WAREHOUSE, REGISTERED, atau IN_REPAIR (selesai repair) boleh di-mark ready
+    const allowedStatuses = [
+      VehicleStatus.IN_WAREHOUSE,
+      VehicleStatus.REGISTERED,
+      VehicleStatus.IN_REPAIR,
+    ];
+    if (!allowedStatuses.includes(vehicle.status)) {
+      throw new BadRequestException(
+        `Kendaraan tidak bisa di-set siap jual dari status "${vehicle.status}". ` +
+          `Status yang diizinkan: ${allowedStatuses.join(', ')}`,
+      );
+    }
+
+    // Cari zona READY milik showroom ini
+    let readyZone = await this.zoneRepo.findOne({
+      where: {
+        showroomId: vehicle.showroomId,
+        type: ZoneType.READY,
+        isActive: true,
+      },
+    });
+
+    // Jika belum ada zona READY, buat otomatis
+    if (!readyZone) {
+      readyZone = this.zoneRepo.create({
+        showroomId: vehicle.showroomId,
+        code: 'GD-READY',
+        name: 'Gudang Ready Jual',
+        type: ZoneType.READY,
+        capacity: 50,
+        currentCount: 0,
+        isActive: true,
+      });
+      readyZone = await this.zoneRepo.save(readyZone);
+    }
+
+    // Cek kapasitas zona
+    if (readyZone.currentCount >= readyZone.capacity) {
+      throw new BadRequestException(
+        `Zona "${readyZone.name}" sudah penuh (${readyZone.currentCount}/${readyZone.capacity})`,
+      );
+    }
+
+    const prevStatus = vehicle.status;
+
+    // 1. Deaktifkan placement lama (jika ada)
+    const oldPlacement = await this.placementRepo.findOne({
+      where: { warehouseVehicleId: vehicleId, isCurrent: true },
+    });
+    if (oldPlacement) {
+      oldPlacement.isCurrent = false;
+      oldPlacement.removedAt = new Date();
+      oldPlacement.action = PlacementAction.MOVED;
+      await this.placementRepo.save(oldPlacement);
+
+      // Kurangi count zona lama
+      if (oldPlacement.zoneId !== readyZone.id) {
+        await this.zoneRepo.decrement(
+          { id: oldPlacement.zoneId },
+          'currentCount',
+          1,
+        );
+      }
+    }
+
+    // 2. Buat placement baru di zona READY
+    const placement = this.placementRepo.create({
+      warehouseVehicleId: vehicleId,
+      zoneId: readyZone.id,
+      scannedById: userId,
+      action: PlacementAction.PLACED,
+      isCurrent: true,
+    });
+    await this.placementRepo.save(placement);
+
+    // 3. Increment count zona READY (hanya jika beda zona atau baru pertama kali)
+    if (!oldPlacement || oldPlacement.zoneId !== readyZone.id) {
+      await this.zoneRepo.increment({ id: readyZone.id }, 'currentCount', 1);
+    }
+
+    // 4. Update status kendaraan → READY
+    vehicle.status = VehicleStatus.READY;
+    await this.vehicleRepo.save(vehicle);
+
+    // 5. Stock log: zone transfer + status change
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: vehicleId,
+        action: StockAction.ZONE_TRANSFER,
+        previousStatus: prevStatus,
+        newStatus: VehicleStatus.READY,
+        performedById: userId,
+        notes: `Siap jual — dipindahkan ke zona "${readyZone.name}" (${readyZone.code})`,
+      }),
+    );
+
+    // Reload vehicle with fresh data
+    const updated = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+      relations: ['showroom', 'variant', 'yearPrice'],
+    });
+
+    return {
+      message:
+        'Kendaraan berhasil ditandai SIAP JUAL dan dipindahkan ke Gudang Ready Jual',
+      data: {
+        vehicle: updated,
+        zone: readyZone,
+        placement,
+      },
+    };
+  }
+
+  // ============================================================
+  // FITUR: SHOWROOM VIEW (Card-based view)
+  // Menampilkan data kendaraan lengkap per showroom untuk card display
+  // ============================================================
+  async getShowroomView(showroomId: string, query: QueryShowroomViewDto) {
+    const showroom = await this.showroomRepo.findOne({
+      where: { id: showroomId },
+    });
+    if (!showroom) throw new NotFoundException('Showroom tidak ditemukan');
+
+    const {
+      page = 1,
+      perPage = 20,
+      search,
+      status,
+      zoneType,
+      sortDirection = 'DESC',
+      sortBy = 'createdAt',
+    } = query;
+
+    // Build query
+    const qb = this.vehicleRepo
+      .createQueryBuilder('v')
+      .leftJoinAndSelect('v.showroom', 'showroom')
+      .leftJoinAndSelect('v.variant', 'variant')
+      .leftJoinAndSelect('v.yearPrice', 'yearPrice')
+      .leftJoinAndSelect('v.carModel', 'carModel')
+      .where('v.showroomId = :showroomId', { showroomId });
+
+    // Filter by status
+    if (status) {
+      qb.andWhere('v.status = :status', { status });
+    }
+
+    // Filter by zone type (join through current placement)
+    if (zoneType) {
+      qb.innerJoin(
+        'vehicle_placements',
+        'vp',
+        'vp.warehouseVehicleId = v.id AND vp.isCurrent = true',
+      )
+        .innerJoin('warehouse_zones', 'z', 'z.id = vp.zoneId')
+        .andWhere('z.type = :zoneType', { zoneType });
+    }
+
+    // Search by brand, model, plate, barcode
+    if (search) {
+      qb.andWhere(
+        '(v.brandName ILIKE :search OR v.modelName ILIKE :search OR v.licensePlate ILIKE :search OR v.barcode ILIKE :search OR v.color ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    // Sorting
+    const allowedSortFields = ['createdAt', 'askingPrice', 'year', 'mileage'];
+    const sortField = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    qb.orderBy(`v.${sortField}`, sortDirection);
+
+    // Pagination
+    const total = await qb.getCount();
+    const vehicles = await qb
+      .skip((page - 1) * perPage)
+      .take(perPage)
+      .getMany();
+
+    // Enrich: tambahkan current zone & latest inspection & available actions per vehicle
+    const enriched = await Promise.all(
+      vehicles.map(async (v) => {
+        // Current placement + zone
+        const currentPlacement = await this.placementRepo.findOne({
+          where: { warehouseVehicleId: v.id, isCurrent: true },
+        });
+        let currentZone = null;
+        if (currentPlacement) {
+          currentZone = await this.zoneRepo.findOne({
+            where: { id: currentPlacement.zoneId },
+          });
+        }
+
+        // Latest inspection
+        const latestInspection = await this.inspectionRepo.findOne({
+          where: { warehouseVehicleId: v.id },
+          order: { createdAt: 'DESC' },
+        });
+
+        // Active repair orders
+        const activeRepair = await this.repairRepo.findOne({
+          where: {
+            warehouseVehicleId: v.id,
+            status: RepairStatus.IN_PROGRESS as any,
+          },
+        });
+
+        // Available actions based on status
+        const actions = this.getAvailableActions(v.status);
+
+        return {
+          // Card data
+          id: v.id,
+          barcode: v.barcode,
+          brandName: v.brandName,
+          modelName: v.modelName,
+          year: v.year,
+          color: v.color,
+          transmission: v.transmission,
+          fuelType: v.fuelType,
+          mileage: v.mileage,
+          askingPrice: v.askingPrice,
+          licensePlate: v.licensePlate,
+          status: v.status,
+          condition: v.condition,
+          ownershipStatus: v.ownershipStatus,
+          taxStatus: v.taxStatus,
+          images: v.images,
+          thumbnail: v.images?.length > 0 ? v.images[0] : null,
+          description: v.description,
+          sellerName: v.sellerName,
+          listingId: v.listingId,
+          createdAt: v.createdAt,
+          updatedAt: v.updatedAt,
+
+          // Location
+          location: {
+            city: v.locationCity || v.showroom?.city,
+            province: v.locationProvince || v.showroom?.province,
+          },
+
+          // Zone info
+          currentZone: currentZone
+            ? {
+                id: currentZone.id,
+                code: currentZone.code,
+                name: currentZone.name,
+                type: currentZone.type,
+              }
+            : null,
+
+          // Inspection summary
+          latestInspection: latestInspection
+            ? {
+                id: latestInspection.id,
+                result: latestInspection.overallResult,
+                documentStatus: latestInspection.documentStatus,
+                inspectedAt: latestInspection.inspectedAt,
+              }
+            : null,
+
+          // Repair info
+          activeRepair: activeRepair
+            ? {
+                id: activeRepair.id,
+                type: activeRepair.repairType,
+                status: activeRepair.status,
+              }
+            : null,
+
+          // Available actions for this vehicle
+          actions,
+        };
+      }),
+    );
+
+    // Summary counts per status for filter tabs
+    const statusCounts = {};
+    for (const s of Object.values(VehicleStatus)) {
+      statusCounts[s] = await this.vehicleRepo.count({
+        where: { showroomId, status: s },
+      });
+    }
+
+    // Zone summary
+    const zones = await this.zoneRepo.find({
+      where: { showroomId, isActive: true },
+      order: { code: 'ASC' },
+    });
+
+    return {
+      message: 'Showroom vehicle view',
+      data: {
+        showroom: {
+          id: showroom.id,
+          name: showroom.name,
+          code: showroom.code,
+          city: showroom.city,
+          province: showroom.province,
+          logo: showroom.logo,
+        },
+        vehicles: enriched,
+        statusCounts,
+        zones: zones.map((z) => ({
+          id: z.id,
+          code: z.code,
+          name: z.name,
+          type: z.type,
+          capacity: z.capacity,
+          currentCount: z.currentCount,
+        })),
+      },
+      pagination: {
+        page,
+        pageSize: perPage,
+        totalRecords: total,
+        totalPages: Math.ceil(total / perPage),
+      },
+    };
+  }
+
+  // ============================================================
+  // FITUR: DETAIL KENDARAAN UNTUK SHOWROOM VIEW (click card)
+  // Detail lengkap saat card di-klik
+  // ============================================================
+  async getVehicleDetailForShowroom(vehicleId: string) {
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+      relations: ['showroom', 'seller', 'variant', 'yearPrice', 'carModel'],
+    });
+    if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
+
+    // All inspections
+    const inspections = await this.inspectionRepo.find({
+      where: { warehouseVehicleId: vehicleId },
+      order: { createdAt: 'DESC' },
+    });
+
+    // Current placement + zone
+    const currentPlacement = await this.placementRepo.findOne({
+      where: { warehouseVehicleId: vehicleId, isCurrent: true },
+    });
+    let currentZone = null;
+    if (currentPlacement) {
+      currentZone = await this.zoneRepo.findOne({
+        where: { id: currentPlacement.zoneId },
+      });
+    }
+
+    // Placement history
+    const placementHistory = await this.placementRepo.find({
+      where: { warehouseVehicleId: vehicleId },
+      order: { createdAt: 'DESC' },
+    });
+
+    // Repairs
+    const repairs = await this.repairRepo.find({
+      where: { warehouseVehicleId: vehicleId },
+      relations: ['assignedTo'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Admin payment
+    const adminPayment = await this.adminPaymentRepo.findOne({
+      where: { warehouseVehicleId: vehicleId },
+    });
+
+    // Purchase transactions
+    const purchases = await this.purchaseRepo.find({
+      where: { warehouseVehicleId: vehicleId },
+      relations: ['buyer'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Stock logs for this vehicle
+    const stockLogs = await this.stockLogRepo.find({
+      where: { warehouseVehicleId: vehicleId },
+      order: { createdAt: 'DESC' },
+      take: 20,
+    });
+
+    // Available actions
+    const actions = this.getAvailableActions(vehicle.status);
+
+    return {
+      message: 'Detail kendaraan showroom',
+      data: {
+        vehicle,
+        currentZone,
+        inspections,
+        placementHistory: placementHistory.map((p) => ({
+          id: p.id,
+          zoneId: p.zoneId,
+          action: p.action,
+          isCurrent: p.isCurrent,
+          placedAt: p.placedAt,
+          removedAt: p.removedAt,
+        })),
+        repairs,
+        adminPayment,
+        purchases,
+        stockLogs,
+        actions,
+      },
+    };
+  }
+
+  // ============================================================
+  // HELPER: Available actions berdasarkan status kendaraan
+  // ============================================================
+  private getAvailableActions(status: VehicleStatus): {
+    key: string;
+    label: string;
+    method: string;
+    endpoint: string;
+    description: string;
+  }[] {
+    const actions: {
+      key: string;
+      label: string;
+      method: string;
+      endpoint: string;
+      description: string;
+    }[] = [];
+
+    switch (status) {
+      case VehicleStatus.INSPECTING:
+        actions.push({
+          key: 'submit_inspection',
+          label: 'Submit Inspeksi',
+          method: 'POST',
+          endpoint: '/api/warehouse/inspections',
+          description: 'Submit hasil inspeksi kendaraan',
+        });
+        break;
+
+      case VehicleStatus.REGISTERED:
+        actions.push(
+          {
+            key: 'place_vehicle',
+            label: 'Tempatkan di Gudang',
+            method: 'POST',
+            endpoint: '/api/warehouse/vehicles/{id}/place',
+            description: 'Tempatkan kendaraan di zona gudang',
+          },
+          {
+            key: 'create_repair',
+            label: 'Buat Work Order Repair',
+            method: 'POST',
+            endpoint: '/api/warehouse/repairs',
+            description: 'Kirim ke bengkel untuk perbaikan',
+          },
+          {
+            key: 'mark_ready',
+            label: 'Siap Jual',
+            method: 'POST',
+            endpoint: '/api/warehouse/vehicles/{id}/mark-ready',
+            description: 'Tandai siap jual & pindahkan ke Gudang Ready Jual',
+          },
+          {
+            key: 'create_admin_payment',
+            label: 'Bayar Admin',
+            method: 'POST',
+            endpoint: '/api/warehouse/payments/{id}',
+            description: 'Buat invoice pembayaran admin Rp 2.000.000',
+          },
+        );
+        break;
+
+      case VehicleStatus.IN_WAREHOUSE:
+        actions.push(
+          {
+            key: 'mark_ready',
+            label: 'Siap Jual',
+            method: 'POST',
+            endpoint: '/api/warehouse/vehicles/{id}/mark-ready',
+            description: 'Tandai siap jual & pindahkan ke Gudang Ready Jual',
+          },
+          {
+            key: 'create_repair',
+            label: 'Kirim ke Repair',
+            method: 'POST',
+            endpoint: '/api/warehouse/repairs',
+            description: 'Kirim ke bengkel untuk perbaikan',
+          },
+          {
+            key: 'move_zone',
+            label: 'Pindah Zona',
+            method: 'POST',
+            endpoint: '/api/warehouse/vehicles/{id}/place',
+            description: 'Pindahkan ke zona lain',
+          },
+        );
+        break;
+
+      case VehicleStatus.IN_REPAIR:
+        actions.push({
+          key: 'mark_ready',
+          label: 'Siap Jual (Selesai Repair)',
+          method: 'POST',
+          endpoint: '/api/warehouse/vehicles/{id}/mark-ready',
+          description: 'Tandai selesai repair & siap jual',
+        });
+        break;
+
+      case VehicleStatus.READY:
+        actions.push({
+          key: 'publish',
+          label: 'Publish ke Marketplace',
+          method: 'POST',
+          endpoint: '/api/warehouse/vehicles/{id}/publish',
+          description: 'Publikasi ke marketplace untuk dijual',
+        });
+        break;
+
+      case VehicleStatus.LISTED:
+        actions.push({
+          key: 'view_listing',
+          label: 'Lihat Listing',
+          method: 'GET',
+          endpoint: '/api/marketplace/listings/{listingId}',
+          description: 'Lihat listing di marketplace',
+        });
+        break;
+
+      case VehicleStatus.SOLD:
+        // No actions for sold vehicles
+        break;
+
+      case VehicleStatus.REJECTED:
+        actions.push({
+          key: 're_inspect',
+          label: 'Inspeksi Ulang',
+          method: 'POST',
+          endpoint: '/api/warehouse/inspections',
+          description: 'Submit inspeksi ulang untuk kendaraan yang di-reject',
+        });
+        break;
+    }
+
+    return actions;
   }
 }

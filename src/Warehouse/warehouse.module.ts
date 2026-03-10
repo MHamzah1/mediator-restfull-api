@@ -28,6 +28,7 @@ import {
   AdminPaymentController,
   PurchaseController,
   StockLogController,
+  ShowroomViewController,
 } from './warehouse.controller';
 
 @Module({
@@ -56,6 +57,7 @@ import {
     AdminPaymentController,
     PurchaseController,
     StockLogController,
+    ShowroomViewController,
   ],
   providers: [WarehouseService],
   exports: [WarehouseService],

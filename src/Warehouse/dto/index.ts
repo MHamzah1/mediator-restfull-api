@@ -7,3 +7,4 @@ export * from './place-vehicle.dto';
 export * from './create-repair.dto';
 export * from './create-purchase.dto';
 export * from './query-warehouse.dto';
+export * from './query-showroom-view.dto';
