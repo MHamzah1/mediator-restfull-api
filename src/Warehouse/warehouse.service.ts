@@ -545,14 +545,17 @@ export class WarehouseService {
     await this.placementRepo.save(placement);
     await this.zoneRepo.increment({ id: dto.zoneId }, 'currentCount', 1);
 
-    // Update vehicle status
-    if (
-      vehicle.status === VehicleStatus.REGISTERED ||
-      vehicle.status === VehicleStatus.PENDING_PAYMENT
-    ) {
-      vehicle.status = VehicleStatus.IN_WAREHOUSE;
-      await this.vehicleRepo.save(vehicle);
-    }
+    // Update vehicle status based on zone type
+    const zoneStatusMap: Record<string, VehicleStatus> = {
+      [ZoneType.READY]: VehicleStatus.READY,
+      [ZoneType.LIGHT_REPAIR]: VehicleStatus.IN_REPAIR,
+      [ZoneType.HEAVY_REPAIR]: VehicleStatus.IN_REPAIR,
+      [ZoneType.HOLDING]: VehicleStatus.IN_WAREHOUSE,
+      [ZoneType.SHOWROOM_DISPLAY]: VehicleStatus.IN_WAREHOUSE,
+    };
+    const newStatus = zoneStatusMap[zone.type] || VehicleStatus.IN_WAREHOUSE;
+    vehicle.status = newStatus;
+    await this.vehicleRepo.save(vehicle);
 
     // Stock log
     await this.stockLogRepo.save(
@@ -586,6 +589,18 @@ export class WarehouseService {
 
     vehicle.status = VehicleStatus.IN_REPAIR;
     await this.vehicleRepo.save(vehicle);
+
+    // Auto-place in appropriate repair zone based on repair type
+    try {
+      const repairZoneType =
+        dto.repairType === 'heavy'
+          ? ZoneType.HEAVY_REPAIR
+          : ZoneType.LIGHT_REPAIR;
+      await this.autoPlaceInZone(vehicle, repairZoneType, userId);
+    } catch (e) {
+      // Zone placement is best-effort, don't fail the repair order
+      console.warn('Auto-place to repair zone failed:', e.message);
+    }
 
     return { message: 'Work order perbaikan berhasil dibuat', data: saved };
   }
@@ -1210,6 +1225,158 @@ export class WarehouseService {
   // FITUR: MARK AS READY TO SELL (Siap Jual)
   // Atomik: ubah status → READY + pindahkan ke zona READY
   // ============================================================
+  /**
+   * GENERIC: Auto-place vehicle in a zone by zone type
+   * Finds or creates the appropriate zone, handles old placement, etc.
+   */
+  private async autoPlaceInZone(
+    vehicle: WarehouseVehicle,
+    zoneType: ZoneType,
+    userId: string,
+    opts?: { zoneName?: string; zoneCode?: string },
+  ) {
+    // Default zone configs
+    const zoneDefaults: Record<string, { code: string; name: string }> = {
+      [ZoneType.READY]: { code: 'GD-READY', name: 'Gudang Ready Dijual' },
+      [ZoneType.LIGHT_REPAIR]: {
+        code: 'GD-LR',
+        name: 'Gudang Perbaikan Ringan',
+      },
+      [ZoneType.HEAVY_REPAIR]: {
+        code: 'GD-HR',
+        name: 'Gudang Perbaikan Berat',
+      },
+      [ZoneType.HOLDING]: { code: 'GD-HOLD', name: 'Gudang Holding' },
+      [ZoneType.SHOWROOM_DISPLAY]: {
+        code: 'GD-DISP',
+        name: 'Display Showroom',
+      },
+    };
+    const defaults = zoneDefaults[zoneType] || { code: 'GD-X', name: 'Gudang' };
+
+    // Find or create zone
+    let zone = await this.zoneRepo.findOne({
+      where: { showroomId: vehicle.showroomId, type: zoneType, isActive: true },
+    });
+    if (!zone) {
+      zone = this.zoneRepo.create({
+        showroomId: vehicle.showroomId,
+        code: opts?.zoneCode || defaults.code,
+        name: opts?.zoneName || defaults.name,
+        type: zoneType,
+        capacity: 50,
+        currentCount: 0,
+        isActive: true,
+      });
+      zone = await this.zoneRepo.save(zone);
+    }
+    if (zone.currentCount >= zone.capacity) {
+      throw new BadRequestException(
+        `Zona "${zone.name}" sudah penuh (${zone.currentCount}/${zone.capacity})`,
+      );
+    }
+
+    // Deactivate old placement
+    const oldPlacement = await this.placementRepo.findOne({
+      where: { warehouseVehicleId: vehicle.id, isCurrent: true },
+    });
+    if (oldPlacement) {
+      oldPlacement.isCurrent = false;
+      oldPlacement.removedAt = new Date();
+      oldPlacement.action = PlacementAction.MOVED;
+      await this.placementRepo.save(oldPlacement);
+      if (oldPlacement.zoneId !== zone.id) {
+        await this.zoneRepo.decrement(
+          { id: oldPlacement.zoneId },
+          'currentCount',
+          1,
+        );
+      }
+    }
+
+    // Create new placement
+    const placement = this.placementRepo.create({
+      warehouseVehicleId: vehicle.id,
+      zoneId: zone.id,
+      scannedById: userId,
+      action: PlacementAction.PLACED,
+      isCurrent: true,
+    });
+    await this.placementRepo.save(placement);
+
+    // Increment count (only if different zone)
+    if (!oldPlacement || oldPlacement.zoneId !== zone.id) {
+      await this.zoneRepo.increment({ id: zone.id }, 'currentCount', 1);
+    }
+
+    return { zone, placement };
+  }
+
+  /**
+   * Place vehicle in zone by zone type (auto-find/create zone + update status)
+   */
+  async placeVehicleByZoneType(
+    vehicleId: string,
+    zoneType: string,
+    userId: string,
+  ) {
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+      relations: ['showroom'],
+    });
+    if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
+
+    const validZoneTypes = Object.values(ZoneType);
+    if (!validZoneTypes.includes(zoneType as ZoneType)) {
+      throw new BadRequestException(
+        `Tipe zona tidak valid: ${zoneType}. Valid: ${validZoneTypes.join(', ')}`,
+      );
+    }
+
+    const prevStatus = vehicle.status;
+
+    // Auto-place in zone
+    const { zone, placement } = await this.autoPlaceInZone(
+      vehicle,
+      zoneType as ZoneType,
+      userId,
+    );
+
+    // Update status based on zone type
+    const zoneStatusMap: Record<string, VehicleStatus> = {
+      [ZoneType.READY]: VehicleStatus.READY,
+      [ZoneType.LIGHT_REPAIR]: VehicleStatus.IN_REPAIR,
+      [ZoneType.HEAVY_REPAIR]: VehicleStatus.IN_REPAIR,
+      [ZoneType.HOLDING]: VehicleStatus.IN_WAREHOUSE,
+      [ZoneType.SHOWROOM_DISPLAY]: VehicleStatus.IN_WAREHOUSE,
+    };
+    vehicle.status = zoneStatusMap[zoneType] || VehicleStatus.IN_WAREHOUSE;
+    await this.vehicleRepo.save(vehicle);
+
+    // Stock log
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: vehicleId,
+        action: StockAction.ZONE_TRANSFER,
+        previousStatus: prevStatus,
+        newStatus: vehicle.status,
+        performedById: userId,
+        notes: `Dipindahkan ke zona "${zone.name}" (${zone.code})`,
+      }),
+    );
+
+    const updated = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+      relations: ['showroom', 'variant', 'yearPrice'],
+    });
+
+    return {
+      message: `Kendaraan berhasil dipindahkan ke zona "${zone.name}"`,
+      data: { vehicle: updated, zone, placement },
+    };
+  }
+
   async markAsReadyToSell(vehicleId: string, userId: string) {
     const vehicle = await this.vehicleRepo.findOne({
       where: { id: vehicleId },

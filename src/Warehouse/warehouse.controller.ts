@@ -297,6 +297,44 @@ export class VehicleController {
   async markReady(@Param('id') id: string, @Request() req) {
     return this.svc.markAsReadyToSell(id, req.user.userId);
   }
+
+  @Post(':id/place-by-type')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'Pindahkan kendaraan ke zona berdasarkan tipe zona',
+    description:
+      'Otomatis mencari/membuat zona sesuai tipe, memindahkan kendaraan, ' +
+      'dan mengubah status kendaraan sesuai tipe zona. ' +
+      'Tipe zona: ready, light_repair, heavy_repair, holding, showroom_display.',
+  })
+  @ApiParam({ name: 'id', description: 'ID kendaraan' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['zoneType'],
+      properties: {
+        zoneType: {
+          type: 'string',
+          enum: [
+            'ready',
+            'light_repair',
+            'heavy_repair',
+            'holding',
+            'showroom_display',
+          ],
+          description: 'Tipe zona tujuan',
+        },
+      },
+    },
+  })
+  async placeByType(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { zoneType: string },
+  ) {
+    return this.svc.placeVehicleByZoneType(id, body.zoneType, req.user.userId);
+  }
 }
 
 // ============================================================
