@@ -896,6 +896,7 @@ export class WarehouseService {
         showroomId: vehicle.showroomId,
         warehouseVehicleId: vehicle.id,
         action: StockAction.STATUS_CHANGE,
+        performedById: payerId,
         notes: `Pembayaran admin Rp 2.000.000 berhasil via ${paymentMethod || 'transfer_bank'}. Status → IN_WAREHOUSE`,
       }),
     );
