@@ -630,6 +630,81 @@ export class WarehouseService {
   // ============================================================
   // ADMIN PAYMENT (Biaya Admin Rp 2.000.000)
   // ============================================================
+
+  async getAllAdminPayments(
+    showroomId?: string,
+    status?: string,
+    page = 1,
+    perPage = 20,
+  ) {
+    const qb = this.adminPaymentRepo
+      .createQueryBuilder('payment')
+      .leftJoinAndSelect('payment.warehouseVehicle', 'vehicle')
+      .leftJoinAndSelect('payment.payer', 'payer')
+      .orderBy('payment.createdAt', 'DESC');
+
+    if (showroomId) {
+      qb.andWhere('vehicle.showroomId = :showroomId', { showroomId });
+    }
+
+    if (status) {
+      qb.andWhere('payment.paymentStatus = :status', { status });
+    }
+
+    const totalRecords = await qb.getCount();
+    const data = await qb
+      .skip((page - 1) * perPage)
+      .take(perPage)
+      .getMany();
+
+    // Map data with vehicle info
+    const mapped = data.map((p) => ({
+      id: p.id,
+      invoiceNumber: p.invoiceNumber,
+      amount: p.amount,
+      currency: p.currency,
+      paymentMethod: p.paymentMethod,
+      paymentStatus: p.paymentStatus,
+      paymentReference: p.paymentReference,
+      paidAt: p.paidAt,
+      expiresAt: p.expiresAt,
+      createdAt: p.createdAt,
+      vehicle: p.warehouseVehicle
+        ? {
+            id: p.warehouseVehicle.id,
+            brandName: p.warehouseVehicle.brandName,
+            modelName: p.warehouseVehicle.modelName,
+            year: p.warehouseVehicle.year,
+            color: p.warehouseVehicle.color,
+            licensePlate: p.warehouseVehicle.licensePlate,
+            barcode: p.warehouseVehicle.barcode,
+            askingPrice: p.warehouseVehicle.askingPrice,
+            status: p.warehouseVehicle.status,
+            images: p.warehouseVehicle.images,
+            sellerName: p.warehouseVehicle.sellerName,
+          }
+        : null,
+      payer: p.payer
+        ? {
+            id: p.payer.id,
+            fullName: p.payer.fullName,
+            email: p.payer.email,
+          }
+        : null,
+    }));
+
+    return {
+      message: 'Daftar pembayaran admin',
+      data: mapped,
+      pagination: {
+        page: Number(page),
+        perPage: Number(perPage),
+        totalRecords,
+        totalPages: Math.ceil(totalRecords / perPage),
+      },
+    };
+  }
+
   async createAdminPayment(vehicleId: string, payerId: string) {
     const vehicle = await this.vehicleRepo.findOne({
       where: { id: vehicleId },
@@ -711,6 +786,128 @@ export class WarehouseService {
     });
     if (!data) throw new NotFoundException('Payment tidak ditemukan');
     return { message: 'Detail pembayaran admin', data };
+  }
+
+  async simulateAdminPayment(vehicleId: string) {
+    const payment = await this.adminPaymentRepo.findOne({
+      where: { warehouseVehicleId: vehicleId },
+    });
+    if (!payment) throw new NotFoundException('Payment tidak ditemukan');
+
+    if (payment.paymentStatus === PaymentStatus.PAID) {
+      throw new BadRequestException('Pembayaran sudah lunas');
+    }
+
+    // Simulasi: langsung set paid
+    payment.paymentStatus = PaymentStatus.PAID;
+    payment.paidAt = new Date();
+    payment.paymentMethod = 'simulated' as any;
+    payment.paymentReference = `SIM-${Date.now()}`;
+    await this.adminPaymentRepo.save(payment);
+
+    // Update vehicle status → IN_WAREHOUSE (sudah bayar, siap masuk gudang)
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+    });
+    if (vehicle) {
+      vehicle.status = VehicleStatus.IN_WAREHOUSE;
+      await this.vehicleRepo.save(vehicle);
+    }
+
+    return {
+      message:
+        'Simulasi pembayaran berhasil! Status: PAID, Kendaraan: IN_WAREHOUSE',
+      data: payment,
+    };
+  }
+
+  /**
+   * Combined: Buat invoice + langsung bayar (untuk development / simulasi)
+   * Mengembalikan detail rincian pembayaran
+   */
+  async createAndPayAdminPayment(
+    vehicleId: string,
+    payerId: string,
+    paymentMethod?: string,
+  ) {
+    const vehicle = await this.vehicleRepo.findOne({
+      where: { id: vehicleId },
+      relations: ['showroom'],
+    });
+    if (!vehicle) throw new NotFoundException('Kendaraan tidak ditemukan');
+
+    // Check if already has payment
+    let payment = await this.adminPaymentRepo.findOne({
+      where: { warehouseVehicleId: vehicleId },
+    });
+
+    if (payment && payment.paymentStatus === PaymentStatus.PAID) {
+      throw new BadRequestException(
+        'Pembayaran admin untuk kendaraan ini sudah lunas',
+      );
+    }
+
+    // If no payment yet, create one
+    if (!payment) {
+      const count = await this.adminPaymentRepo.count();
+      const invoiceNumber = `INV-WH-${new Date().getFullYear()}-${String(count + 1).padStart(5, '0')}`;
+
+      payment = this.adminPaymentRepo.create({
+        warehouseVehicleId: vehicleId,
+        payerId,
+        amount: 2000000,
+        invoiceNumber,
+        paymentUrl: null,
+        paymentStatus: PaymentStatus.PENDING,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      });
+      payment = await this.adminPaymentRepo.save(payment);
+    }
+
+    // Immediately mark as paid
+    payment.paymentStatus = PaymentStatus.PAID;
+    payment.paidAt = new Date();
+    payment.paymentMethod = (paymentMethod || 'transfer_bank') as any;
+    payment.paymentReference = `PAY-${Date.now()}`;
+    await this.adminPaymentRepo.save(payment);
+
+    // Update vehicle status → IN_WAREHOUSE
+    vehicle.status = VehicleStatus.IN_WAREHOUSE;
+    await this.vehicleRepo.save(vehicle);
+
+    // Create stock log
+    await this.stockLogRepo.save(
+      this.stockLogRepo.create({
+        showroomId: vehicle.showroomId,
+        warehouseVehicleId: vehicle.id,
+        action: StockAction.STATUS_CHANGE,
+        notes: `Pembayaran admin Rp 2.000.000 berhasil via ${paymentMethod || 'transfer_bank'}. Status → IN_WAREHOUSE`,
+      }),
+    );
+
+    return {
+      message: 'Pembayaran admin berhasil! Kendaraan siap masuk gudang.',
+      data: {
+        payment: {
+          id: payment.id,
+          invoiceNumber: payment.invoiceNumber,
+          amount: payment.amount,
+          currency: payment.currency,
+          paymentMethod: payment.paymentMethod,
+          paymentStatus: payment.paymentStatus,
+          paidAt: payment.paidAt,
+        },
+        vehicle: {
+          id: vehicle.id,
+          brandName: vehicle.brandName,
+          modelName: vehicle.modelName,
+          year: vehicle.year,
+          licensePlate: vehicle.licensePlate,
+          barcode: vehicle.barcode,
+          status: vehicle.status,
+        },
+      },
+    };
   }
 
   // ============================================================
@@ -1522,6 +1719,16 @@ export class WarehouseService {
           method: 'POST',
           endpoint: '/api/warehouse/vehicles/{id}/mark-ready',
           description: 'Tandai selesai repair & siap jual',
+        });
+        break;
+
+      case VehicleStatus.PENDING_PAYMENT:
+        actions.push({
+          key: 'simulate_payment',
+          label: 'Konfirmasi Pembayaran (Dev)',
+          method: 'POST',
+          endpoint: '/api/warehouse/payments/{id}/simulate-payment',
+          description: 'Simulasi pembayaran berhasil (development only)',
         });
         break;
 

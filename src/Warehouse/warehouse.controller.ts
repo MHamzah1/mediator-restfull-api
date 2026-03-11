@@ -476,6 +476,29 @@ export class RepairController {
 export class AdminPaymentController {
   constructor(private readonly svc: WarehouseService) {}
 
+  @Get('all')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({
+    summary: 'List semua pembayaran admin (dengan filter showroom)',
+  })
+  @ApiQuery({ name: 'showroomId', required: false, type: String })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['pending', 'paid', 'failed', 'expired'],
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'perPage', required: false, type: Number })
+  async findAll(
+    @Query('showroomId') showroomId?: string,
+    @Query('status') status?: string,
+    @Query('page') page?: number,
+    @Query('perPage') perPage?: number,
+  ) {
+    return this.svc.getAllAdminPayments(showroomId, status, page, perPage);
+  }
+
   @Post(':vehicleId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
@@ -512,6 +535,43 @@ export class AdminPaymentController {
   @ApiOperation({ summary: 'Cek status pembayaran admin per kendaraan' })
   async getPayment(@Param('vehicleId') vehicleId: string) {
     return this.svc.getAdminPayment(vehicleId);
+  }
+
+  @Post(':vehicleId/simulate-payment')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Simulasi pembayaran admin berhasil (Development Only)',
+    description:
+      'Endpoint ini mensimulasikan callback dari payment gateway. ' +
+      'Otomatis mengubah paymentStatus menjadi "paid" dan status kendaraan menjadi "registered". ' +
+      'Hanya untuk development/testing.',
+  })
+  async simulatePayment(@Param('vehicleId') vehicleId: string) {
+    return this.svc.simulateAdminPayment(vehicleId);
+  }
+
+  @Post(':vehicleId/pay')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Buat invoice + langsung bayar admin fee (Tahap 2 - Combined)',
+    description:
+      'Membuat invoice Rp 2.000.000, langsung menandai sebagai PAID, ' +
+      'dan mengubah status kendaraan menjadi IN_WAREHOUSE.',
+  })
+  async createAndPay(
+    @Param('vehicleId') vehicleId: string,
+    @Request() req,
+    @Body() body: { paymentMethod?: string },
+  ) {
+    return this.svc.createAndPayAdminPayment(
+      vehicleId,
+      req.user.userId,
+      body?.paymentMethod,
+    );
   }
 }
 
